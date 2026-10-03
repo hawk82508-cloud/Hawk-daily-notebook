@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>每日研習與個人紀錄筆記 V39 (異動即時同步與刪除追蹤防復原版)</title>
+    <title>每日研習與個人紀錄筆記 V44 (文字精簡優化版)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons CDN -->
@@ -86,7 +86,7 @@
                     <i data-lucide="book-open-check" class="w-5 h-5">📖</i>
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-stone-800 serif tracking-wide">每日功課與想法紀錄 <span class="text-xs font-normal text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">V39</span></h1>
+                    <h1 class="text-lg font-bold text-stone-800 serif tracking-wide">每日功課與想法紀錄 <span class="text-xs font-normal text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">V44</span></h1>
                                     </div>
             </div>
 
@@ -1154,9 +1154,9 @@
 
             if (connected) {
                 if (icon) icon.textContent = '🟢';
-                if (text) text.textContent = '🟢 雲端即時連線中';
+                if (text) text.textContent = '🟢 雲端已連線';
                 if (tabBadge) {
-                    tabBadge.textContent = '🟢 雲端即時連線中 (雙向 30s 自動對齊 & 防復原機制開啟)';
+                    tabBadge.textContent = '🟢 雲端已連線 (按鈕同步)';
                     tabBadge.className = 'text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold';
                 }
             } else {
@@ -1171,7 +1171,7 @@
 
         
         // ==========================================
-        // 刪除追蹤防復原機制 (Deletion Tombstone) & 即時/背景同步 (V39)
+        // 刪除追蹤防復原機制 (Deletion Tombstone) & 即時/背景同步 (V44)
         // ==========================================
         const TOMBSTONE_KEY = 'gdrive_deleted_tombstone_v39';
         let deletedTombstone = loadTombstoneData();
@@ -1231,14 +1231,9 @@
             }, 1000);
         }
 
-        let backgroundSyncInterval = null;
+        // 背景自動對齊已依需求完全取消，全面改為點擊「儲存所有功課與雲端同步」按鈕後才手動上傳覆蓋
         function startBackgroundAutoSync() {
-            if (backgroundSyncInterval) clearInterval(backgroundSyncInterval);
-            backgroundSyncInterval = setInterval(async () => {
-                if (isGdriveConnected && gdriveAccessToken) {
-                    await syncFromGoogleDrive(true); // background quiet mode
-                }
-            }, 30000); // 每 30 秒自動對齊
+            // Background polling disabled as requested by user
         }
 
 
@@ -1335,23 +1330,32 @@ async function syncFromGoogleDrive(isBackground = false) {
             try {
                 if (!gdriveFolderId) gdriveFolderId = await getOrCreateGdriveFolder(GDRIVE_FOLDER_NAME, null);
 
-                // 將 Tombstone 附加於上傳 JSON 中，達成跨裝置同步刪除狀態
-                const payload = { ...journalData, _tombstone: deletedTombstone };
+                // 進行 JSON 瘦身與刪除防復原清理：以當前最新狀態覆蓋雲端，並徹底排除已刪除之檔案與項目
+                const sanitizedJournalData = JSON.parse(JSON.stringify(journalData));
+                Object.keys(sanitizedJournalData).forEach(d => {
+                    if (sanitizedJournalData[d]) {
+                        if (Array.isArray(sanitizedJournalData[d].files)) {
+                            sanitizedJournalData[d].files = sanitizedJournalData[d].files.filter(f => 
+                                !deletedTombstone.files.includes(f.name) && 
+                                !deletedTombstone.files.includes(f.gdriveFileId)
+                            );
+                            sanitizedJournalData[d].files.forEach(f => {
+                                delete f.dataUrl; // 強制移除 Base64，維持 4K 輕量
+                            });
+                        }
+                    }
+                });
+
+                const payload = { ...sanitizedJournalData, _tombstone: deletedTombstone };
 
                 await uploadOrUpdateGdriveFile(GDRIVE_FILE_NAME, 'application/json', JSON.stringify(payload), gdriveFolderId);
                 await uploadOrUpdateGdriveFile(GDRIVE_CALENDAR_FILE_NAME, 'application/json', JSON.stringify(calendarEvents), gdriveFolderId);
 
                 if (!isSilent) {
-                    showTemporarySaveNotice('✅ 已即時寫入 Google Drive 雲端');
-                } else {
-                    const saveStatus = document.getElementById('save-status');
-                    if (saveStatus) {
-                        saveStatus.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> 🟢 異動已即時推推至雲端 (' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) + ')';
-                        safeCreateIcons();
-                    }
+                    showTemporarySaveNotice('✅ 雲端已同步！');
                 }
             } catch (e) {
-                console.warn('Gdrive Auto Upload Warning:', e);
+                console.warn('Gdrive Upload Warning:', e);
             }
         }
 
@@ -1623,8 +1627,7 @@ async function syncFromGoogleDrive(isBackground = false) {
                 recordDateCleared(currentDate); // 記錄至刪除 Tombstone
                 saveCurrentDateData();
                 updateScoreUI();
-                uploadDataToGdrive();
-                showTemporarySaveNotice('🧹 已成功清空當日投資筆記所有儲存格！');
+                showTemporarySaveNotice('🧹 已成功清空當日投資筆記所有儲存格！(按下「儲存所有功課與雲端同步」即可同步雲端)');
             }
         };
 
@@ -1812,13 +1815,13 @@ async function syncFromGoogleDrive(isBackground = false) {
                 Object.keys(fields).forEach(id => {
                     const elem = document.getElementById(id);
                     if (elem) {
-                        elem.addEventListener('input', function() {
+                        elem.addEventListener('input', debounce(function() {
                             if (journalData[currentDate] && deletedTombstone.dates && deletedTombstone.dates[currentDate]) {
                                 removeDateClearedTombstone(currentDate); // 當使用者重新輸入文字時，解除該日期的清空 Tombstone 狀態
                             }
-                            triggerInstantCloudSync();
+                            saveCurrentDateData();
                             updateScoreUI();
-                        });
+                        }, 300));
                     }
                 });
 
@@ -1858,11 +1861,12 @@ async function syncFromGoogleDrive(isBackground = false) {
 
                 const saveBtn = document.getElementById('manual-save-btn');
                 if (saveBtn) {
-                    saveBtn.addEventListener('click', function() {
+                    saveBtn.addEventListener('click', async function() {
                         saveCurrentDateData();
                         updateScoreUI();
-                        uploadDataToGdrive();
-                        showTemporarySaveNotice('已手動儲存並成功同步雲端！');
+                        showTemporarySaveNotice('⏳ 正在同步至雲端...');
+                        await uploadDataToGdrive(false);
+                        showTemporarySaveNotice('✅ 雲端已同步！');
                     });
                 }
 
@@ -2108,34 +2112,29 @@ async function syncFromGoogleDrive(isBackground = false) {
             let processedCount = 0;
 
             filesArray.forEach(async (f) => {
-                // If Google Drive is connected, upload standalone binary file directly into Google Drive attachments folder!
                 let driveRes = null;
-                if (isGdriveConnected) {
-                    showTemporarySaveNotice(`正在將實體研報 ${f.name} 上傳至 Google Drive...`);
+                if (isGdriveConnected && gdriveAccessToken) {
+                    showTemporarySaveNotice(`正在將實體研報 ${f.name} 上傳至 Google Drive 研報資料夾...`);
                     driveRes = await uploadStandaloneBinaryFileToGdrive(f);
                 }
 
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    journalData[currentDate].files.push({
-                        name: f.name,
-                        size: (f.size / 1024 / 1024).toFixed(2) + ' MB',
-                        uploadedAt: new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'}),
-                        dataUrl: e.target.result,
-                        summaryNotes: '',
-                        gdriveFileId: driveRes ? driveRes.id : null,
-                        gdriveWebViewLink: driveRes ? driveRes.webViewLink : null
-                    });
-                    processedCount++;
+                // 實體檔案已直接獨立存放至 Google Drive 研報資料夾中，JSON 只保留輕量檔名與雲端連結，不儲存 Base64 重體內容，確保 JSON 體積永遠維持極小的 4K 輕量化！
+                journalData[currentDate].files.push({
+                    name: f.name,
+                    size: (f.size / 1024 / 1024).toFixed(2) + ' MB',
+                    uploadedAt: new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'}),
+                    summaryNotes: '',
+                    gdriveFileId: driveRes ? driveRes.id : null,
+                    gdriveWebViewLink: driveRes ? driveRes.webViewLink : null
+                });
+                processedCount++;
 
-                    if (processedCount === filesArray.length) {
-                        saveAllData();
-                        renderResearchCards(journalData[currentDate].files);
-                        updateScoreUI();
-                        uploadDataToGdrive();
-                    }
-                };
-                reader.readAsDataURL(f);
+                if (processedCount === filesArray.length) {
+                    saveAllData();
+                    renderResearchCards(journalData[currentDate].files);
+                    updateScoreUI();
+                    showTemporarySaveNotice('✅ 實體研報已成功上傳存入 Google Drive 研報夾，JSON 庫維持 4K 極輕量！');
+                }
             });
         }
 
@@ -2208,23 +2207,53 @@ async function syncFromGoogleDrive(isBackground = false) {
             }
         };
 
-        window.downloadFileObj = function(idx, targetDateStr) {
+        window.downloadFileObj = async function(idx, targetDateStr) {
             const dateKey = targetDateStr || currentDate;
             const entry = journalData[dateKey];
             if (entry && entry.files && entry.files[idx]) {
                 const file = entry.files[idx];
+
+                // 1. 若有 Google Drive 檔案 ID，優先發送 Drive API 取得實體 Blob 並強迫觸發原生瀏覽器檔案下載
+                if (file.gdriveFileId && gdriveAccessToken) {
+                    try {
+                        showTemporarySaveNotice(`正在下載研報檔案：${file.name}...`);
+                        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.gdriveFileId}?alt=media`, {
+                            headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+                        });
+                        if (!res.ok) throw new Error('Drive API 下載失敗');
+                        const blob = await res.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = file.name || 'research_report.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+                        showTemporarySaveNotice(`✅ ${file.name} 已成功下載至裝置！`);
+                        return;
+                    } catch (e) {
+                        console.warn('API Direct Fetch Failed, falling back to direct uc download:', e);
+                        window.location.href = `https://drive.google.com/uc?export=download&id=${file.gdriveFileId}`;
+                        return;
+                    }
+                } else if (file.gdriveFileId) {
+                    window.location.href = `https://drive.google.com/uc?export=download&id=${file.gdriveFileId}`;
+                    return;
+                }
+
+                // 2. 本機相容備援 (dataUrl)
                 if (file.dataUrl) {
                     const a = document.createElement('a');
                     a.href = file.dataUrl;
-                    a.download = file.name;
+                    a.download = file.name || 'research_report.pdf';
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                } else if (file.gdriveWebViewLink) {
-                    window.open(file.gdriveWebViewLink, '_blank');
-                } else {
-                    alert('此示範檔案未夾帶實體資料內容，無法下載。自己上傳的實體檔案皆可正常點擊下載！');
+                    return;
                 }
+
+                alert('實體研報存放在您的 Google Drive，請先連接 Google 帳號即可一鍵下載！');
             }
         };
 
@@ -2236,8 +2265,7 @@ async function syncFromGoogleDrive(isBackground = false) {
                 saveAllData();
                 renderResearchCards(journalData[currentDate].files);
                 updateScoreUI();
-                uploadDataToGdrive();
-                showTemporarySaveNotice('🗑️ 已成功刪除研報檔案，並防範雲端復原！');
+                showTemporarySaveNotice('🗑️ 已成功刪除研報檔案 (按下「儲存所有功課與雲端同步」即可同步至雲端)！');
             }
         };
 
