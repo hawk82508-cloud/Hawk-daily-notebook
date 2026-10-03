@@ -1,0 +1,2721 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日研習與個人紀錄筆記 V39 (異動即時同步與刪除追蹤防復原版)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services & API Client SDKs -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f7f6f3;
+            color: #2d3748;
+        }
+
+        .serif {
+            font-family: 'Noto Serif TC', Georgia, serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+
+        .tab-btn.active {
+            border-bottom: 2px solid #9f1239;
+            color: #881337;
+            font-weight: 600;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Auto expanding textareas */
+        textarea.auto-expand {
+            overflow-y: hidden;
+            resize: vertical;
+        }
+
+        .bg-rose-badge {
+            background-color: rgba(255, 241, 242, 0.85);
+            color: #9f1239;
+            border: 1px solid rgba(251, 113, 133, 0.5);
+        }
+
+        .pie-segment {
+            transition: stroke-dasharray 0.4s ease, stroke-dashoffset 0.4s ease;
+        }
+    
+ .no-scrollbar::-webkit-scrollbar {
+     display: none;
+ }
+ .no-scrollbar {
+     -ms-overflow-style: none;
+     scrollbar-width: none;
+ }
+</style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+    <!-- Header Section (Sticky Top Container) -->
+    <header id="main-header" class="bg-white border-b border-stone-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-100/60 text-rose-800 flex items-center justify-center font-bold">
+                    <i data-lucide="book-open-check" class="w-5 h-5">📖</i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-stone-800 serif tracking-wide">每日功課與想法紀錄 <span class="text-xs font-normal text-rose-800 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">V39</span></h1>
+                                    </div>
+            </div>
+
+            <!-- Date Selector, Status, Google Drive Status & Word Export Button -->
+            <div class="flex items-center space-x-3">
+                <button id="gdrive-connect-btn" onclick="initGoogleAuth()" class="hidden md:inline-flex items-center text-xs bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 font-semibold px-2.5 py-1 rounded-lg transition shadow-xs" title="點擊連結或同步 Google Drive 雲端硬碟">
+                    <span id="gdrive-status-icon" class="mr-1">🔐</span>
+                    <span id="gdrive-status-text">連結 Google 雲端硬碟</span>
+                </button>
+
+                <div class="flex items-center bg-stone-100 rounded-lg p-1 border border-stone-200">
+                    <button id="prev-day-btn" class="p-1 hover:bg-white rounded text-stone-600 transition" title="前一天">
+                        <i data-lucide="chevron-left" class="w-4 h-4">◀</i>
+                    </button>
+                    <input type="date" id="current-date-picker" class="bg-transparent text-xs font-semibold text-stone-700 px-2 focus:outline-none cursor-pointer">
+                    <button id="next-day-btn" class="p-1 hover:bg-white rounded text-stone-600 transition" title="後一天">
+                        <i data-lucide="chevron-right" class="w-4 h-4">▶</i>
+                    </button>
+                    <button id="today-btn" class="text-xs bg-rose-800 text-white px-2 py-1 rounded ml-1 hover:bg-rose-900 transition">
+                        今天
+                    </button>
+                </div>
+
+                <button id="export-word-btn" class="inline-flex items-center text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 font-semibold px-3 py-1.5 rounded-lg transition shadow-sm">
+                    <i data-lucide="file-down" class="w-3.5 h-3.5 mr-1.5">📄</i> 匯出投資筆記 Word
+                </button>
+
+                <div class="hidden lg:flex items-center">
+                    <span id="save-status" class="inline-flex items-center text-xs text-rose-900 bg-rose-50/80 px-2.5 py-1 rounded-full border border-rose-200">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> 已自動儲存
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6 text-sm border-t border-stone-100 bg-stone-50/60 overflow-x-auto">
+            <button class="tab-btn active py-3 flex items-center space-x-2 text-stone-600 hover:text-stone-900 transition whitespace-nowrap" onclick="switchMainTab('daily-input', this)">
+                <i data-lucide="edit-3" class="w-4 h-4">✍️</i>
+                <span>每日想法輸入</span>
+            </button>
+            <button class="tab-btn py-3 flex items-center space-x-2 text-stone-600 hover:text-stone-900 transition whitespace-nowrap" onclick="switchMainTab('overview-view', this)">
+                <i data-lucide="calendar" class="w-4 h-4">📊</i>
+                <span>日 / 週 / 月總覽</span>
+            </button>
+            <button class="tab-btn py-3 flex items-center space-x-2 text-stone-600 hover:text-stone-900 transition whitespace-nowrap" onclick="switchMainTab('yearly-calendar', this)">
+                <i data-lucide="calendar-range" class="w-4 h-4">📅</i>
+                <span>全年投資行事曆 (12個月)</span>
+            </button>
+            <button class="tab-btn py-3 flex items-center space-x-2 text-stone-600 hover:text-stone-900 transition whitespace-nowrap" onclick="switchMainTab('history-search', this)">
+                <i data-lucide="search" class="w-4 h-4">🔍</i>
+                <span>歷史紀錄與檢索</span>
+            </button>
+            <button class="tab-btn py-3 flex items-center space-x-2 text-stone-600 hover:text-stone-900 transition whitespace-nowrap" onclick="switchMainTab('settings-backup', this)">
+                <i data-lucide="database" class="w-4 h-4">☁️</i>
+                <span>雲端同步與資料備份</span>
+            </button>
+        </div>
+
+        <!-- Module Quick-Jump Bar & Donut Chart -->
+        <div id="module-quick-jump-bar" class="border-t border-stone-200 bg-stone-100/90 backdrop-blur-md sticky top-[57px] z-20">
+            <div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-1.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+                <!-- Mobile & Desktop Horizontal Scrollable Nav Buttons -->
+                <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar text-xs font-medium shrink py-0.5 whitespace-nowrap">
+                    <button onclick="scrollToModule('sec-investment')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-rose-200 text-rose-900 hover:bg-rose-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        📈 <span class="hidden sm:inline">投資筆記 (10主題)</span><span class="sm:hidden ml-1">投資筆記</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-research')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-stone-200 text-slate-800 hover:bg-slate-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        📄 <span class="hidden sm:inline">研究報告上傳</span><span class="sm:hidden ml-1">研報</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-diary')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-stone-200 text-amber-900 hover:bg-amber-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        ✍️ <span class="hidden sm:inline">日記</span><span class="sm:hidden ml-1">日記</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-reading')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-stone-200 text-teal-900 hover:bg-teal-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        📚 <span class="hidden sm:inline">讀書心得</span><span class="sm:hidden ml-1">讀書</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-workout')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-stone-200 text-sky-900 hover:bg-sky-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        🏃 <span class="hidden sm:inline">運動紀錄</span><span class="sm:hidden ml-1">運動</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-golden-quote')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-amber-200 text-amber-900 hover:bg-amber-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs">
+                        💡 <span class="hidden sm:inline">金句紀錄</span><span class="sm:hidden ml-1">金句</span>
+                    </button>
+                    <button onclick="scrollToModule('sec-links')" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-white border border-stone-200 text-indigo-900 hover:bg-indigo-50 transition shadow-2xs flex items-center shrink-0 text-[11px] sm:text-xs font-bold">
+                        🔗 <span class="hidden sm:inline">網路連結</span><span class="sm:hidden ml-1">連結</span>
+                    </button>
+                </div>
+
+                <!-- Compact "本日總分" Score Box on the Same Line -->
+                <div class="flex items-center space-x-1.5 sm:space-x-3 bg-white px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-lg sm:rounded-xl border border-stone-200 shadow-2xs shrink-0 whitespace-nowrap">
+                    <div class="relative w-5 h-5 sm:w-8 sm:h-8 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 sm:w-8 sm:h-8 transform -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15.9155" stroke="#e7e5e4" stroke-width="4.5" fill="none" />
+                            <circle id="pie-inv" class="pie-segment" cx="18" cy="18" r="15.9155" stroke="#9f1239" stroke-width="4.5" fill="none" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                            <circle id="pie-res" class="pie-segment" cx="18" cy="18" r="15.9155" stroke="#475569" stroke-width="4.5" fill="none" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                            <circle id="pie-dia" class="pie-segment" cx="18" cy="18" r="15.9155" stroke="#d97706" stroke-width="4.5" fill="none" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                            <circle id="pie-rea" class="pie-segment" cx="18" cy="18" r="15.9155" stroke="#0d9488" stroke-width="4.5" fill="none" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                            <circle id="pie-wor" class="pie-segment" cx="18" cy="18" r="15.9155" stroke="#0284c7" stroke-width="4.5" fill="none" stroke-dasharray="0 100" stroke-dashoffset="0" />
+                        </svg>
+                    </div>
+
+                    <div class="text-[11px] sm:text-xs">
+                        <span class="font-bold text-stone-700">本日總分：</span>
+                        <span id="top-total-score" class="font-extrabold text-rose-900 text-xs sm:text-sm">0</span>
+                        <span class="text-stone-400 font-normal text-[10px] sm:text-xs">/100分</span>
+                    </div>
+
+                    <div class="text-[11px] text-stone-400 border-l border-stone-200 pl-3 hidden md:block">
+                        目前日期：<span class="display-selected-date font-bold text-stone-700"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+        <!-- TAB 1: 每日輸入 -->
+        <section id="tab-daily-input" class="space-y-6">
+
+            <!-- Module 1: 投資筆記 -->
+            <div id="sec-investment" class="bg-white rounded-xl p-3.5 sm:p-6 border border-rose-200 card-shadow space-y-3.5 sm:space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-rose-100 pb-4 gap-2">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <span class="w-3 h-6 bg-rose-800/70 rounded-full"></span>
+                        <h2 class="text-base font-bold text-rose-900/90 serif">投資筆記</h2>
+                        <span class="text-xs bg-rose-50/80 text-rose-900/90 px-2.5 py-0.5 rounded-full border border-rose-200/60 font-semibold">
+                            占 30 分（<span id="score-investment-main">0</span>/30分）
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="text-xs text-stone-400 hidden md:inline">含 10 大主題，每主題填寫得 3 分</span>
+                        <button onclick="clearInvestmentNotes()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-semibold px-3 py-1 rounded-lg transition shadow-2xs flex items-center space-x-1" title="一鍵清空今日 10 項投資筆記內容，方便重新輸入">
+                            <span>🧹 清空儲存格</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-5">
+                    <!-- 1. 國際股市 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">1</span>
+                                國際股市
+                            </label>
+                            <span id="score-invGlobalStock" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-global-stock" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="美股三大指數、歐股、亞股行情走勢及影響因素..."></textarea>
+                    </div>
+
+                    <!-- 2. 國際重要個股走勢 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">2</span>
+                                國際重要個股走勢
+                            </label>
+                            <span id="score-invGlobalSingleStock" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-global-single-stock" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="NVDA, TSMC ADR, AAPL, MSFT, AMZN, AVGO 等科技指標股..."></textarea>
+                    </div>
+
+                    <!-- 3. 前晚重要總經數據及指標 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">3</span>
+                                前晚重要總經數據及指標
+                            </label>
+                            <span id="score-invPastEconData" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-past-econ-data" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="前晚 CPI/PCE、非農就業、Fed 官員談話、美債殖利率變化..."></textarea>
+                    </div>
+
+                    <!-- 4. 當晚重要總經數據 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">4</span>
+                                當晚重要總經數據
+                            </label>
+                            <span id="score-invUpcomingEconData" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-upcoming-econ-data" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="即將公布之經濟數據、市場預期值與關注點..."></textarea>
+                    </div>
+
+                    <!-- 5. 當日美股重要法說 / 財報 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">5</span>
+                                當日美股重要法說 / 財報
+                            </label>
+                            <span id="score-invUsEarnings" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-us-earnings" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="美股開盤前/收盤後法說會、財報數據與展望 (Guidance)..."></textarea>
+                    </div>
+
+                    <!-- 6. 匯率動態 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">6</span>
+                                匯率動態
+                            </label>
+                            <span id="score-invFxRate" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-fx-rate" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="美元指數 (DXY)、USD/TWD、EUR/USD、USD/JPY 走勢與資金動向..."></textarea>
+                    </div>
+
+                    <!-- 7. 台股走勢及量價 -->
+                    <div class="space-y-1.5 md:col-span-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">7</span>
+                                台股走勢及量價
+                            </label>
+                            <span id="score-invTwMarket" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-tw-market" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="加權指數、OTC指數、成交量能、三大法人買賣超、領漲族群與權值股表現..."></textarea>
+                    </div>
+
+                    <!-- 8. 類股漲跌 -->
+                    <div class="space-y-1.5 md:col-span-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">8</span>
+                                類股漲跌
+                            </label>
+                            <span id="score-invSectorPerformance" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-sector-performance" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="強勢族群（如半導體設備、矽光子）、弱勢族群、資金輪動方向與強弱勢對比..."></textarea>
+                    </div>
+
+                    <!-- 9. 檢討及心得 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">9</span>
+                                檢討及心得
+                            </label>
+                            <span id="score-invReviewLearnings" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-review-learnings" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="今日交易或研究決策檢討、心態控管、風控調整..."></textarea>
+                    </div>
+
+                    <!-- 10. 下一交易日走勢規劃 -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-stone-700 flex items-center">
+                                <span class="w-5 h-5 rounded bg-rose-100/60 text-rose-900 inline-flex items-center justify-center mr-1.5 text-[11px] font-bold">10</span>
+                                下一交易日走勢規劃
+                            </label>
+                            <span id="score-invNextDayPlan" class="text-[11px] font-medium text-rose-900/80 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-200/60">0/3分</span>
+                        </div>
+                        <textarea id="inv-next-day-plan" rows="5" class="auto-expand w-full text-sm rounded-lg border border-rose-200/60 p-3 bg-rose-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 focus:outline-none transition min-h-[110px]" placeholder="重點關聯價位、擬定加減碼策略、潛在風險因應..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module 2: 研究報告上傳 & 動態多檔案重點結論 (同步直接上傳實體 PDF/Word 檔案至 Google Drive 專屬資料夾) -->
+            <div id="sec-research" class="bg-white rounded-xl p-6 border border-stone-200 card-shadow space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 pb-3 gap-2">
+                    <div class="flex items-center space-x-2.5">
+                        <span class="w-3 h-6 bg-slate-700 rounded-full"></span>
+                        <h2 class="text-base font-bold text-stone-800 serif">研究報告上傳與重點結論</h2>
+                        <span class="text-xs bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-full border border-slate-300 font-bold">
+                            占 20 分（<span id="score-research-main">0</span>/20分）
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <a href="https://notebooklm.google.com/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 font-medium transition">
+                            <i data-lucide="external-link" class="w-3.5 h-3.5 mr-1.5">🔗</i> 開啟 Gemini NotebookLM
+                        </a>
+                        <button id="copy-prompt-btn" class="text-xs text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 font-medium transition flex items-center">
+                            <i data-lucide="copy" class="w-3.5 h-3.5 mr-1.5">📋</i> 複製 Gemini 研報摘要 Prompt
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                    <div class="md:col-span-3 flex flex-col space-y-2">
+                        <label class="block text-xs font-bold text-stone-700">
+                            📁 研報檔案上傳 (實體雲端存檔)
+                        </label>
+                        <div id="drop-zone" class="border-2 border-dashed border-stone-300 hover:border-slate-500 rounded-xl p-4 text-center bg-stone-50/50 transition cursor-pointer flex flex-col items-center justify-center flex-grow min-h-[200px]">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-stone-400 mb-2">☁️</i>
+                            <p class="text-xs font-bold text-stone-700">拖曳或點擊選擇研報</p>
+                            <p class="text-[11px] text-stone-400 mt-1">支援 PDF / Word 格式</p>
+                            <p class="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 mt-2 font-semibold">實體檔案同步存放至 Google Drive 研報夾</p>
+                            <input type="file" id="report-file-input" class="hidden" multiple>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-9 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-stone-700 flex items-center">
+                                <i data-lucide="file-text" class="w-4 h-4 mr-1.5 text-slate-700">📄</i> 研究報告重點及結論 (依上傳檔案數自動跳出獨立輸入窗格)
+                            </label>
+                        </div>
+                        <div id="dynamic-research-cards-container" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modules 3, 4, 5 -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+                <!-- Module 3: 日記 (10分) -->
+                <div id="sec-diary" class="md:col-span-4 bg-white rounded-xl p-5 border border-stone-200 card-shadow space-y-3">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-5 bg-amber-600 rounded-full"></span>
+                            <h2 class="text-sm font-bold text-stone-800 serif">日記 (Daily)</h2>
+                        </div>
+                        <span class="text-xs bg-amber-50 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200 font-bold">
+                            占 10 分（<span id="score-diary-main">0</span>/10分）
+                        </span>
+                    </div>
+                    <textarea id="diary-text" rows="10" class="auto-expand w-full text-sm rounded-lg border border-stone-200 p-3 bg-stone-50/30 focus:bg-white focus:ring-2 focus:ring-amber-600/20 focus:border-amber-600 focus:outline-none transition" placeholder="寫下今天的日常生活、個人心情隨筆、工作的思考或反思..."></textarea>
+                </div>
+
+                <!-- Module 4: 讀書心得 (20分，共3欄，每欄各占1/3分) -->
+                <div id="sec-reading" class="md:col-span-5 bg-white rounded-xl p-5 border border-stone-200 card-shadow space-y-3">
+                    <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-5 bg-teal-600 rounded-full"></span>
+                            <h2 class="text-sm font-bold text-stone-800 serif">讀書心得</h2>
+                        </div>
+                        <span class="text-xs bg-teal-50 text-teal-900 px-2.5 py-0.5 rounded-full border border-teal-200 font-bold">
+                            占 20 分（<span id="score-reading-main">0</span>/20分）
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-teal-800 font-medium">💡 需完整填寫下方 3 個欄位方可獲得滿分 20 分 (每欄占 6.7 分)</p>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 gap-2">
+                            <input type="text" id="reading-book-title" class="w-full text-xs font-semibold rounded-md border border-stone-200 p-2.5 bg-stone-50/30 focus:bg-white focus:border-teal-600 focus:outline-none" placeholder="1. 📖 書名 / 章節 / 文章名稱">
+                            <input type="url" id="reading-book-url" class="w-full text-xs text-blue-700 rounded-md border border-stone-200 p-2.5 bg-stone-50/30 focus:bg-white focus:border-teal-600 focus:outline-none" placeholder="2. 🔗 書籍購買 / 參考網址 (如: 博客來, Amazon 連結)">
+                        </div>
+
+
+                        <textarea id="reading-text" rows="5" class="auto-expand w-full text-sm rounded-lg border border-stone-200 p-3 bg-stone-50/30 focus:bg-white focus:ring-2 focus:ring-teal-600/20 focus:border-teal-600 focus:outline-none transition" placeholder="3. 核心觀點摘錄、深刻啟發與實踐行動方案..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Module 5 & 6: 運動紀錄 (20分) 與 金句紀錄 (不計分) -->
+                <div class="md:col-span-3 flex flex-col space-y-5">
+                    <div id="sec-workout" class="bg-white rounded-xl p-5 border border-stone-200 card-shadow space-y-3 flex-grow">
+                        <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-5 bg-sky-600 rounded-full"></span>
+                                <h2 class="text-sm font-bold text-stone-800 serif">運動紀錄</h2>
+                            </div>
+                            <span class="text-xs bg-sky-50 text-sky-900 px-2.5 py-0.5 rounded-full border border-sky-200 font-bold">
+                                占 20 分（<span id="score-workout-main">0</span>/20分）
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-sky-800 font-medium">💡 需完整填寫下方 3 個欄位方可獲得滿分 20 分 (每欄占 6.7 分)</p>
+                        <div class="space-y-2">
+                            <input type="text" id="workout-type" class="w-full text-xs rounded-md border border-stone-200 p-2 bg-stone-50/30 focus:bg-white focus:border-sky-600 focus:outline-none" placeholder="1. 🏃 運動項目 (跑步/重訓)">
+                            <input type="text" id="workout-duration" class="w-full text-xs rounded-md border border-stone-200 p-2 bg-stone-50/30 focus:bg-white focus:border-sky-600 focus:outline-none" placeholder="2. ⏱️ 時長 / 重量組數">
+                            <textarea id="workout-text" rows="2" class="auto-expand w-full text-sm rounded-lg border border-stone-200 p-2.5 bg-stone-50/30 focus:bg-white focus:ring-2 focus:ring-sky-600/20 focus:border-sky-600 focus:outline-none transition" placeholder="3. 體能狀態、心率數據與備註..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Module 6: 金句紀錄 (格式同日記，小方框縮小一半，不計分) -->
+                    <div id="sec-golden-quote" class="bg-white rounded-xl p-5 border border-stone-200 card-shadow space-y-3">
+                        <div class="flex items-center justify-between border-b border-stone-100 pb-2.5">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-5 bg-amber-500 rounded-full"></span>
+                                <h2 class="text-sm font-bold text-stone-800 serif">金句紀錄</h2>
+                            </div>
+                            <span class="text-xs bg-amber-50 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-200 font-semibold">
+                                自由紀錄（不計分數）
+                            </span>
+                        </div>
+                        <textarea id="golden-quote-text" rows="2" class="auto-expand w-full text-sm rounded-lg border border-stone-200 p-2.5 bg-stone-50/30 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:outline-none transition" placeholder="記錄今天的金句感悟、經典名言、啟發思考的話語..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requirement 5: 最下方「重要網頁連結與備忘」輸入框（不計分） -->
+            <div id="sec-links" class="bg-white rounded-xl p-4 sm:p-5 border border-indigo-200/80 card-shadow space-y-2.5">
+                <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-5 bg-indigo-600 rounded-full"></span>
+                        <h2 class="text-sm font-bold text-stone-800 serif">每日重要網頁連結與備忘紀錄</h2>
+                        <span class="text-xs bg-indigo-50 text-indigo-900 px-2 py-0.5 rounded-full border border-indigo-200 font-semibold">
+                            自由剪貼備忘（不計分數）
+                        </span>
+                    </div>
+                    <span class="text-xs text-stone-400">方便日後快速檢索與開啟連結</span>
+                </div>
+                <textarea id="important-links" rows="3" class="auto-expand w-full text-xs sm:text-sm rounded-lg border border-stone-200 p-3 bg-indigo-50/10 text-stone-800 focus:bg-white focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 focus:outline-none transition" placeholder="在此貼上今天看到的實用參考網址、優質文章或個股法說簡報連結，例如：
+• https://www.bloomberg.com/...
+• https://mops.twse.com.tw/..."></textarea>
+            </div>
+
+            <div class="pt-2 flex justify-end space-x-3">
+                <button id="manual-save-btn" class="bg-rose-800 hover:bg-rose-900 text-white font-medium px-6 py-2.5 rounded-xl shadow transition flex items-center space-x-2">
+                    <i data-lucide="save" class="w-4 h-4">💾</i>
+                    <span>儲存所有功課與雲端同步</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: 日 / 週 / 月總覽 -->
+        <section id="tab-overview-view" class="hidden space-y-6">
+            <div class="bg-white rounded-xl p-6 border border-stone-200 card-shadow space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-stone-800 serif">功課完成與分數總覽</h2>
+                        <p class="text-xs text-stone-500">直觀檢視日、週、月分別拿到的功課總分數與填寫項目</p>
+                    </div>
+
+                    <div class="flex bg-stone-100 p-1 rounded-lg border border-stone-200 self-start sm:self-auto">
+                        <button id="view-mode-day" onclick="switchOverviewMode('day')" class="px-3.5 py-1.5 text-xs font-medium rounded-md bg-white text-stone-800 shadow-sm transition">日檢視 (卡片)</button>
+                        <button id="view-mode-week" onclick="switchOverviewMode('week')" class="px-3.5 py-1.5 text-xs font-medium rounded-md text-stone-600 hover:text-stone-900 transition">週檢視 (方塊小卡標籤)</button>
+                        <button id="view-mode-month" onclick="switchOverviewMode('month')" class="px-3.5 py-1.5 text-xs font-medium rounded-md text-stone-600 hover:text-stone-900 transition">月檢視 (月曆標籤)</button>
+                    </div>
+                </div>
+
+                <div id="overview-day-container" class="space-y-4">
+                    <div class="flex items-center justify-between text-xs text-stone-500">
+                        <span>日歷程紀錄列表：</span>
+                        <span id="total-days-count">載入中...</span>
+                    </div>
+                    <div id="daily-cards-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <div id="overview-week-container" class="hidden space-y-6">
+                    <div id="weekly-summary-list" class="space-y-6"></div>
+                </div>
+
+                <div id="overview-month-container" class="hidden space-y-4">
+                    <div class="flex items-center justify-between bg-stone-50 p-3 rounded-lg border border-stone-200">
+                        <button id="cal-prev-month" class="text-xs text-stone-600 hover:text-stone-900 px-3 py-1 bg-white rounded border border-stone-200">← 上個月</button>
+                        <h3 id="cal-month-title" class="text-base font-bold text-stone-800 serif">2026年7月</h3>
+                        <button id="cal-next-month" class="text-xs text-stone-600 hover:text-stone-900 px-3 py-1 bg-white rounded border border-stone-200">下個月 →</button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-stone-500 py-2 bg-stone-100 rounded-t-lg">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-1 bg-stone-200 p-1 rounded-b-lg"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: 全年投資行事曆 -->
+        <section id="tab-yearly-calendar" class="hidden space-y-6">
+            <div class="bg-white rounded-xl p-6 border border-stone-200 card-shadow space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-stone-800 serif">全年 12 個月投資行事曆</h2>
+                        <p class="text-xs text-stone-500">每列呈現 2 個月寬版網格，每日提供加大輸入框，可自由輸入多行投資計畫、財報與 Fed 會議備註</p>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <button id="calendar-prev-year-btn" class="text-xs px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 rounded border border-stone-200">← 上一年</button>
+                        <span id="calendar-year-title" class="text-base font-bold text-rose-900 serif">2026 年</span>
+                        <button id="calendar-next-year-btn" class="text-xs px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 rounded border border-stone-200">下一年 →</button>
+                    </div>
+                </div>
+
+                <div id="full-year-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-8"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: 歷史紀錄與搜尋 -->
+        <section id="tab-history-search" class="hidden space-y-6">
+            <div class="bg-white rounded-xl p-6 border border-stone-200 card-shadow space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-stone-800 serif">歷史紀錄全文檢索</h2>
+                    <p class="text-xs text-stone-500">輸入關鍵字快速搜尋歷史個股、研報、日記或閱讀心得</p>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3 top-3">🔍</i>
+                        <input type="text" id="search-keyword-input" class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-stone-300 focus:ring-2 focus:ring-rose-900/20 focus:border-rose-900 focus:outline-none" placeholder="搜尋關鍵字，例如：台積電, 美元指數, CPI, 類股, 納瓦爾...">
+                    </div>
+                    <select id="search-category-filter" class="text-sm rounded-lg border border-stone-300 px-3 py-2 bg-white text-stone-700 focus:outline-none">
+                        <option value="all">全部分類</option>
+                        <option value="investment">投資筆記</option>
+                        <option value="research">研究報告摘要</option>
+                        <option value="diary">日記</option>
+                        <option value="reading">讀書心得</option>
+                        <option value="workout">運動紀錄</option>
+                        <option value="goldenQuote">金句紀錄</option>
+                    </select>
+                    <button id="execute-search-btn" class="bg-stone-800 hover:bg-stone-900 text-white text-sm px-5 py-2 rounded-lg transition flex items-center justify-center">
+                        搜尋歷史
+                    </button>
+                </div>
+
+                <div id="search-results-container" class="space-y-4">
+                    <p class="text-xs text-stone-400 italic">請輸入關鍵字開始檢索...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: Google Drive 雲端同步與資料備份 (V16 實體研報存檔版) -->
+        <section id="tab-settings-backup" class="hidden space-y-6">
+            <div class="bg-white rounded-xl p-6 border border-stone-200 card-shadow space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-stone-800 serif">☁️ Google Drive 雲端直連同步設定</h2>
+                    <p class="text-xs text-stone-500">將資料與實體研報 PDF/Word 檔案直接存入您個人 Google Drive，跨裝置 1 秒自動連線同步。</p>
+                </div>
+
+
+                <div class="border border-emerald-200 bg-emerald-50/40 rounded-xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2 text-emerald-950 font-bold text-sm">
+                            <span class="text-base">🔐</span>
+                            <span>Google Drive API 連線認證設定</span>
+                        </div>
+                        <span id="tab-gdrive-status-badge" class="text-xs bg-stone-200 text-stone-700 px-2.5 py-1 rounded-full font-medium">尚未連線</span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-stone-700">
+                            輸入您的 Google Cloud OAuth Client ID (只需設定一次，自動存在本機)：
+                        </label>
+                        <input type="text" id="gdrive-client-id-input" class="w-full text-xs p-2.5 rounded-lg border border-stone-300 font-mono bg-white focus:outline-none focus:border-emerald-600" placeholder="例如: 123456789012-abc123xyz.apps.googleusercontent.com">
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 pt-1">
+                        <button onclick="saveClientIdAndConnect()" class="text-xs bg-emerald-800 hover:bg-emerald-900 text-white font-bold px-5 py-2 rounded-lg transition shadow-sm flex items-center">
+                            <span>🔐 儲存金鑰並登入 Google 帳號</span>
+                        </button>
+                        <button onclick="initGoogleAuth(true)" class="text-xs bg-teal-700 hover:bg-teal-800 text-white font-bold px-4 py-2 rounded-lg transition shadow-sm flex items-center" title="適用於手機版瀏覽器，防彈出視窗空白">
+                            <span>📱 手機頁面跳轉登入 (推薦手機版)</span>
+                        </button>
+                        <button onclick="syncFromGoogleDrive()" class="text-xs bg-white text-stone-800 hover:bg-stone-100 border border-stone-300 font-bold px-4 py-2 rounded-lg transition shadow-xs flex items-center">
+                            <span>🔄 載入最新雲端資料與檔案</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-emerald-100/70 p-3.5 rounded-lg border border-emerald-200/80 text-[11px] text-emerald-950 leading-relaxed space-y-1.5">
+                        <div class="font-bold flex items-center text-xs">💡 手機版登入運作原理說明：</div>
+                        <p>當您在手機版按下<b>「📱 手機頁面跳轉登入」</b>後，系統會直接在原頁面跳轉至 Google 官方授權頁，完成授權後會帶回 Token 自動解析並載入雲端資料，無須開啟 Popup 彈出視窗。</p>
+                    </div>
+
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200/90 text-xs text-stone-800 leading-relaxed space-y-2">
+                        <div class="font-bold text-amber-900 flex items-center space-x-1.5 text-sm">
+                            <span>🚨 手機版登入出現「已封鎖存取權 (Access Blocked)」檢測與解決清單：</span>
+                        </div>
+                        <ol class="list-decimal list-inside space-y-1.5 text-[11.5px] text-stone-700">
+                            <li><b>【重要】禁止使用 file:// 本地檔案開啟：</b> Google 官方 OAuth 嚴格禁止 <code>file://</code> 本地檔案發起雲端連線。若您是直接打開下載的 .html 檔案，請務必將網頁部署至 <b>GitHub Pages</b> 或 <b>Vercel</b>，或透過伺服器網址開啟。</li>
+                            <li><b>【Google Cloud Console 設定】加入「已授權的重導向 URI」：</b> 請前往 Google Cloud 憑證設定頁，在<b>「已授權的重導向 URI (Authorized redirect URIs)」</b>與<b>「已授權的 JavaScript 來源」</b>填入您手機開網頁的完整 URL（例如：<code>https://yourname.github.io/app.html</code>）。</li>
+                            <li><b>【Google Cloud Console 設定】將 Email 加入「測試使用者」：</b> 若您的 Google Cloud 應用程式狀態為<b>「測試中 (Testing)」</b>，請至<b>「OAuth 同意畫面」&gt;「測試使用者 (Test users)」</b>新增您的 Google Email 帳號（例如 <code>hawk82508@gmail.com</code>）。否則授權時 Google 就會顯示「已封鎖存取權」！</li>
+                            <li><b>【瀏覽器環境】切換至手機系統瀏覽器：</b> 請勿在 LINE、FB、微信內建瀏覽器內直接點選連線。請點右上方「...」選擇<b>「在 Safari 開啟」</b>(iOS) 或<b>「在 Chrome 開啟」</b>(Android)。</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div class="border border-stone-200 rounded-xl p-5 space-y-3 bg-stone-50/50">
+                        <div class="flex items-center space-x-2 text-rose-900 font-bold text-sm">
+                            <i data-lucide="download" class="w-4 h-4">📥</i>
+                            <span>匯出 JSON 本機備份檔案</span>
+                        </div>
+                        <p class="text-xs text-stone-600">手動下載包含歷史所有投資筆記與心得的 JSON 備份檔。</p>
+                        <button id="export-json-btn" class="text-xs bg-rose-800 hover:bg-rose-900 text-white px-4 py-2 rounded-lg font-medium transition">
+                            下載 JSON 備份檔
+                        </button>
+                    </div>
+
+                    <div class="border border-stone-200 rounded-xl p-5 space-y-3 bg-stone-50/50">
+                        <div class="flex items-center space-x-2 text-amber-800 font-bold text-sm">
+                            <i data-lucide="upload" class="w-4 h-4">📤</i>
+                            <span>匯入 JSON 備份檔案</span>
+                        </div>
+                        <p class="text-xs text-stone-600">選擇先前備份之 JSON 檔案還原或合併資料。</p>
+                        <input type="file" id="import-json-file" accept=".json" class="hidden">
+                        <button id="trigger-import-btn" class="text-xs bg-stone-700 hover:bg-stone-800 text-white px-4 py-2 rounded-lg font-medium transition">
+                            選擇 JSON 檔案並匯入
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-stone-200 pt-5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-800">載入 4 天測試範例資料 (7/20 ~ 7/23)</h3>
+                            <p class="text-xs text-stone-500">一鍵載入 7/20~7/23 共 4 天完整紀錄，保留 1 天方便您親自輸入測試發射煙火秀！</p>
+                        </div>
+                        <button id="load-demo-btn" class="text-xs bg-rose-800 hover:bg-rose-900 text-white px-4 py-2 rounded-lg font-medium transition">
+                            載入 4 天範例資料 (7/20~7/23)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    
+    <!-- Fireworks Canvas Overlay (Gamified Milestone Celebration) -->
+    <canvas id="fireworks-canvas" class="fixed inset-0 pointer-events-none z-50 hidden"></canvas>
+    
+    <!-- Milestone Celebration Toast Modal -->
+    <div id="milestone-toast-modal" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 hidden transition-all duration-500 scale-90 opacity-0">
+        <div class="bg-stone-900/90 text-white px-6 py-4 rounded-2xl shadow-2xl border-2 border-amber-400 flex items-center space-x-3 backdrop-blur-md">
+            <span id="milestone-icon" class="text-3xl">🎆</span>
+            <div>
+                <h4 id="milestone-title" class="font-extrabold text-sm sm:text-base text-amber-300">達成連續紀錄紀律里程碑！</h4>
+                <p id="milestone-desc" class="text-xs text-stone-200">每週一重置計算，繼續保持卓越品質！</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Viewing / Editing Full Entry -->
+
+    <div id="entry-detail-modal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-stone-200">
+            <div class="p-5 border-b border-stone-200 flex items-center justify-between">
+                <div>
+                    <h3 id="modal-date-title" class="text-base font-bold text-stone-800 serif">2026-07-21 完整功課與紀錄全文</h3>
+                    <p class="text-xs text-stone-500">完整列出本日所有欄位紀錄內容</p>
+                </div>
+                <button onclick="closeModal()" class="text-stone-400 hover:text-stone-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5">✖</i>
+                </button>
+            </div>
+            <div id="modal-body-content" class="p-6 overflow-y-auto space-y-5 text-sm text-stone-700"></div>
+            <div class="p-4 border-t border-stone-200 bg-stone-50 flex justify-between items-center rounded-b-2xl">
+                <button id="modal-jump-edit-btn" class="text-xs bg-rose-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-rose-900 transition flex items-center">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5 mr-1.5">✏️</i> 切換至此日期進行編輯
+                </button>
+                <button onclick="closeModal()" class="text-xs bg-stone-200 text-stone-700 px-4 py-2 rounded-lg font-medium hover:bg-stone-300 transition">
+                    關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic with Standalone File Upload to Google Drive -->
+    <script>
+        const STORAGE_KEY = 'hawk_journal_v29';
+        const CALENDAR_STORAGE_KEY = 'investment_calendar_events_v27';
+        const CLIENT_ID_KEY = 'gdrive_user_client_id_v29';
+
+        const GDRIVE_FOLDER_NAME = 'Hawk_投資與研習日誌資料庫';
+        const GDRIVE_ATTACHMENTS_FOLDER_NAME = '研報附件';
+        const GDRIVE_FILE_NAME = 'journal_data_master.json';
+        const GDRIVE_CALENDAR_FILE_NAME = 'investment_calendar_events.json';
+
+        function getStoredClientId() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    return localStorage.getItem(CLIENT_ID_KEY) || '';
+                }
+            } catch (e) {}
+            return '';
+        }
+
+        let googleClientId = getStoredClientId();
+        let tokenClient = null;
+        let gdriveAccessToken = null;
+        let gdriveFolderId = null;
+        let gdriveAttachmentsFolderId = null;
+        let isGdriveConnected = false;
+
+        let currentDate = getTodayString();
+        let memoryStorageFallback = {};
+        let journalData = loadAllData();
+        let calendarEvents = loadCalendarData();
+        let currentCalendarMonth = new Date();
+        let currentCalendarYear = new Date().getFullYear();
+
+        const fields = {
+            'inv-global-stock': 'invGlobalStock',
+            'inv-global-single-stock': 'invGlobalSingleStock',
+            'inv-past-econ-data': 'invPastEconData',
+            'inv-upcoming-econ-data': 'invUpcomingEconData',
+            'inv-us-earnings': 'invUsEarnings',
+            'inv-fx-rate': 'invFxRate',
+            'inv-tw-market': 'invTwMarket',
+            'inv-sector-performance': 'invSectorPerformance',
+            'inv-review-learnings': 'invReviewLearnings',
+            'inv-next-day-plan': 'invNextDayPlan',
+            'diary-text': 'diaryText',
+            'reading-book-title': 'readingBookTitle',
+            'reading-book-url': 'readingBookUrl',
+                        'reading-text': 'readingText',
+            'workout-type': 'workoutType',
+            'workout-duration': 'workoutDuration',
+            'workout-text': 'workoutText',
+            'golden-quote-text': 'goldenQuoteText',
+            'peking-opera-text': 'pekingOperaText',
+            'important-links': 'importantLinks'
+        };
+
+        const investmentFieldLabels = {
+            'invGlobalStock': '1. 國際股市',
+            'invGlobalSingleStock': '2. 國際重要個股走勢',
+            'invPastEconData': '3. 前晚重要總經數據及指標',
+            'invUpcomingEconData': '4. 當晚重要總經數據',
+            'invUsEarnings': '5. 當日美股重要法說 / 財報',
+            'invFxRate': '6. 匯率動態',
+            'invTwMarket': '7. 台股走勢及量價',
+            'invSectorPerformance': '8. 類股漲跌',
+            'invReviewLearnings': '9. 檢討及心得',
+            'invNextDayPlan': '10. 下一交易日走勢規劃'
+        };
+
+        
+        // --- V25 Fireworks Engine & Discipline Milestone Checker ---
+        let fireworksAnimFrame = null;
+        let fireworksEndTime = 0;
+
+        function calculateStreak(endDateStr) {
+            if (!endDateStr) return 0;
+            let current = new Date(endDateStr);
+            let streak = 0;
+            for (let i = 0; i < 365; i++) {
+                const dStr = formatDateStr(current);
+                const entry = journalData[dStr];
+                const score = entry ? calculateDayScore(entry).total : 0;
+                if (score >= 80) {
+                    streak++;
+                    current.setDate(current.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        window.checkDisciplineMilestones = function() {
+            try {
+                const streak = calculateStreak(currentDate);
+
+                const milestoneKey = `milestone_triggered_${currentDate}`;
+                let alreadyTriggeredToday = null;
+                try {
+                    if (typeof sessionStorage !== 'undefined') {
+                        alreadyTriggeredToday = sessionStorage.getItem(milestoneKey);
+                    }
+                } catch (e) {}
+
+                if (!alreadyTriggeredToday) {
+                    // 高級里程碑：自中斷後連續 30 天 (一個月) 滿 80 分 -> 維多利亞港跨年級大型煙火
+                    if (streak >= 30) {
+                        try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(milestoneKey, 'month'); } catch (e) {}
+                        triggerFireworks('grand');
+                        showMilestoneToast('🎆 震撼傳奇里程碑！', `您已自中斷後連續 30 天 (一個月) 每日 80分+！達成維多利亞港跨年級紀律大滿貫！`, '🎆');
+                    }
+                    // 中級里程碑：自中斷後連續 7 天滿 80 分 -> 中型煙火
+                    else if (streak >= 7) {
+                        try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(milestoneKey, 'week7'); } catch (e) {}
+                        triggerFireworks('medium');
+                        showMilestoneToast('🏆 卓越整週里程碑！', `您已自中斷後連續 7 天每日 80分+！達成整週滿貫！`, '🏆');
+                    }
+                    // 初級里程碑：自中斷後連續 5 天滿 80 分 -> 小型煙火
+                    else if (streak >= 5) {
+                        try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(milestoneKey, 'week5'); } catch (e) {}
+                        triggerFireworks('small');
+                        showMilestoneToast('🎉 精彩五連勝里程碑！', `您已自中斷後連續 5 天每日 80分+！達成五連勝紀律大滿貫！`, '🎉');
+                    }
+                }
+            } catch (e) {
+                console.warn("Milestone check warning:", e);
+            }
+        };
+
+        function formatDateStr(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function showMilestoneToast(title, desc, icon) {
+            const toast = document.getElementById('milestone-toast-modal');
+            const titleEl = document.getElementById('milestone-title');
+            const descEl = document.getElementById('milestone-desc');
+            const iconEl = document.getElementById('milestone-icon');
+
+            if (toast && titleEl && descEl) {
+                titleEl.textContent = title;
+                descEl.textContent = desc;
+                if (iconEl) iconEl.textContent = icon;
+
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.remove('scale-90', 'opacity-0');
+                    toast.classList.add('scale-100', 'opacity-100');
+                }, 50);
+
+                setTimeout(() => {
+                    toast.classList.remove('scale-100', 'opacity-100');
+                    toast.classList.add('scale-90', 'opacity-0');
+                    setTimeout(() => toast.classList.add('hidden'), 500);
+                }, 9000);
+            }
+        }
+
+        window.triggerFireworks = function(level) {
+            const canvas = document.getElementById('fireworks-canvas');
+            if (!canvas) return;
+
+            canvas.classList.remove('hidden');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            let particles = [];
+            let rockets = [];
+            const colors = ['#ff4d4d', '#ffbe33', '#26de81', '#2bcbba', '#4b7bec', '#a55eea', '#ffffff', '#ffd700'];
+
+            fireworksEndTime = Date.now() + 10000;
+
+            function launchRocket() {
+                const x = Math.random() * (canvas.width * 0.8) + canvas.width * 0.1;
+                const targetY = Math.random() * (canvas.height * 0.4) + canvas.height * 0.1;
+                const speed = level === 'grand' ? 12 : (level === 'medium' ? 10 : 8);
+                rockets.push({
+                    x: x,
+                    y: canvas.height,
+                    targetY: targetY,
+                    speed: speed,
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
+
+            function explode(x, y, color) {
+                const particleCount = level === 'grand' ? 120 : (level === 'medium' ? 70 : 45);
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const velocity = Math.random() * (level === 'grand' ? 8 : 5) + 1;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * velocity,
+                        vy: Math.sin(angle) * velocity,
+                        alpha: 1,
+                        decay: Math.random() * 0.02 + 0.01,
+                        color: colors[Math.floor(Math.random() * colors.length)]
+                    });
+                }
+            }
+
+            function animate() {
+                if (Date.now() > fireworksEndTime) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    canvas.classList.add('hidden');
+                    cancelAnimationFrame(fireworksAnimFrame);
+                    return;
+                }
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                const spawnRate = level === 'grand' ? 0.35 : (level === 'medium' ? 0.2 : 0.12);
+                if (Math.random() < spawnRate) {
+                    launchRocket();
+                }
+
+                for (let i = rockets.length - 1; i >= 0; i--) {
+                    const r = rockets[i];
+                    r.y -= r.speed;
+                    ctx.beginPath();
+                    ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = r.color;
+                    ctx.fill();
+
+                    if (r.y <= r.targetY) {
+                        explode(r.x, r.y, r.color);
+                        rockets.splice(i, 1);
+                    }
+                }
+
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.08;
+                    p.alpha -= p.decay;
+
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    ctx.restore();
+
+                    if (p.alpha <= 0) {
+                        particles.splice(i, 1);
+                    }
+                }
+
+                fireworksAnimFrame = requestAnimationFrame(animate);
+            }
+
+            animate();
+        };
+
+        window.safeCreateIcons = function() {
+            try {
+                if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                    lucide.createIcons();
+                }
+            } catch (e) {}
+        };
+
+        window.autoExpandTextarea = function(elem) {
+            if (!elem) return;
+            try {
+                elem.style.height = 'auto';
+                elem.style.height = (elem.scrollHeight + 2) + 'px';
+            } catch (e) {}
+        };
+
+        window.initAutoExpandTextareas = function() {
+            document.querySelectorAll('textarea.auto-expand').forEach(textarea => {
+                textarea.addEventListener('input', () => autoExpandTextarea(textarea));
+                autoExpandTextarea(textarea);
+            });
+        };
+
+        // --- Google Drive Direct Sync & Standalone Binary File Upload ---
+        
+        // --- Requirement 4: AI Book Key Insights Generator ---
+        
+        
+        // --- Requirement 2: Auto Scroll to current month card ---
+        window.scrollToCurrentMonthCard = function() {
+            const now = new Date();
+            if (now.getFullYear() === currentCalendarYear) {
+                const currentMonthIdx = now.getMonth();
+                const card = document.getElementById('month-card-' + currentMonthIdx);
+                if (card) {
+                    const headerHeight = document.getElementById('main-header').offsetHeight || 120;
+                    const elementPosition = card.getBoundingClientRect().top + window.pageYOffset;
+                    const offsetPosition = elementPosition - headerHeight - 15;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        };
+
+        window.saveClientIdAndConnect = function() {
+            const input = document.getElementById('gdrive-client-id-input');
+            if (!input || !input.value.trim()) {
+                alert('請先輸入有效的 Google Cloud OAuth Client ID！');
+                return;
+            }
+            googleClientId = input.value.trim();
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(CLIENT_ID_KEY, googleClientId);
+                }
+            } catch (e) {}
+            initGoogleAuth();
+        };
+
+        window.checkOAuthRedirectHash = function() {
+            try {
+                const hash = window.location.hash;
+                if (hash && hash.includes('access_token=')) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const token = params.get('access_token');
+                    if (token) {
+                        gdriveAccessToken = token;
+                        isGdriveConnected = true;
+                        try {
+                            sessionStorage.setItem('gdrive_access_token', token);
+                        } catch (e) {}
+                        history.replaceState(null, '', window.location.pathname + window.location.search);
+                        updateGdriveStatusUI(true);
+                            startBackgroundAutoSync();
+                        showTemporarySaveNotice('✅ 已成功透過 Google 帳號完成驗證登入！正在讀取雲端最新資料...');
+                        setTimeout(() => {
+                            syncFromGoogleDrive();
+                        }, 400);
+                        return true;
+                    }
+                } else {
+                    const savedToken = sessionStorage.getItem('gdrive_access_token');
+                    if (savedToken) {
+                        gdriveAccessToken = savedToken;
+                        isGdriveConnected = true;
+                        updateGdriveStatusUI(true);
+                            startBackgroundAutoSync();
+                    }
+                }
+            } catch (e) {}
+            return false;
+        };
+
+        window.initGoogleAuth = function(forceRedirect = false) {
+            const input = document.getElementById('gdrive-client-id-input');
+            if (input && input.value.trim()) {
+                googleClientId = input.value.trim();
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.setItem(CLIENT_ID_KEY, googleClientId);
+                    }
+                } catch (e) {}
+            }
+
+            if (!googleClientId) {
+                switchMainTab('settings-backup');
+                alert('請先在設定頁面輸入您的 Google Client ID！');
+                return;
+            }
+
+            if (window.location.protocol === 'file:') {
+                alert('⚠️ 偵測到您目前以本地檔案 (file://) 開啟網頁。\n\nGoogle OAuth 安全機制禁止本地 `.html` 檔案進行雲端認證。\n請將網頁上傳至 GitHub Pages、Vercel 或經由 Web 伺服器開啟網頁！');
+                return;
+            }
+
+            const redirectUri = window.location.href.split('#')[0].split('?')[0];
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+            if (isMobile || forceRedirect) {
+                const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file');
+                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&include_granted_scopes=true&prompt=consent`;
+                window.location.href = authUrl;
+                return;
+            }
+
+            try {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+                    tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: googleClientId,
+                        scope: 'https://www.googleapis.com/auth/drive.file',
+                        callback: async (response) => {
+                            if (response.error !== undefined) {
+                                alert('Google 授權失敗：' + (response.error_description || response.error));
+                                return;
+                            }
+                            gdriveAccessToken = response.access_token;
+                            isGdriveConnected = true;
+                            try {
+                                sessionStorage.setItem('gdrive_access_token', response.access_token);
+                            } catch (e) {}
+                            updateGdriveStatusUI(true);
+                            startBackgroundAutoSync();
+                            await syncFromGoogleDrive();
+                        },
+                    });
+                    tokenClient.requestAccessToken({ prompt: 'consent' });
+                } else {
+                    const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file');
+                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&include_granted_scopes=true&prompt=consent`;
+                    window.location.href = authUrl;
+                }
+            } catch (err) {
+                const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file');
+                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(googleClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&include_granted_scopes=true&prompt=consent`;
+                window.location.href = authUrl;
+            }
+        };
+
+        function updateGdriveStatusUI(connected) {
+            const icon = document.getElementById('gdrive-status-icon');
+            const text = document.getElementById('gdrive-status-text');
+            const tabBadge = document.getElementById('tab-gdrive-status-badge');
+
+            if (connected) {
+                if (icon) icon.textContent = '🟢';
+                if (text) text.textContent = '🟢 雲端即時連線中';
+                if (tabBadge) {
+                    tabBadge.textContent = '🟢 雲端即時連線中 (雙向 30s 自動對齊 & 防復原機制開啟)';
+                    tabBadge.className = 'text-xs bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold';
+                }
+            } else {
+                if (icon) icon.textContent = '🔐';
+                if (text) text.textContent = '連結 Google 雲端硬碟';
+                if (tabBadge) {
+                    tabBadge.textContent = '🟡 使用本機模式 (尚未連線)';
+                    tabBadge.className = 'text-xs bg-stone-200 text-stone-700 px-2.5 py-1 rounded-full font-medium';
+                }
+            }
+        }
+
+        
+        // ==========================================
+        // 刪除追蹤防復原機制 (Deletion Tombstone) & 即時/背景同步 (V39)
+        // ==========================================
+        const TOMBSTONE_KEY = 'gdrive_deleted_tombstone_v39';
+        let deletedTombstone = loadTombstoneData();
+
+        function loadTombstoneData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const data = localStorage.getItem(TOMBSTONE_KEY);
+                    return data ? JSON.parse(data) : { dates: {}, files: [], calendarEvents: {} };
+                }
+            } catch (e) {}
+            return { dates: {}, files: [], calendarEvents: {} };
+        }
+
+        function saveTombstoneData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify(deletedTombstone));
+                }
+            } catch (e) {}
+        }
+
+        function recordFileDeletion(fileName, gdriveFileId) {
+            if (!deletedTombstone.files) deletedTombstone.files = [];
+            if (fileName && !deletedTombstone.files.includes(fileName)) {
+                deletedTombstone.files.push(fileName);
+            }
+            if (gdriveFileId && !deletedTombstone.files.includes(gdriveFileId)) {
+                deletedTombstone.files.push(gdriveFileId);
+            }
+            saveTombstoneData();
+        }
+
+        function recordDateCleared(dateStr) {
+            if (!deletedTombstone.dates) deletedTombstone.dates = {};
+            deletedTombstone.dates[dateStr] = {
+                clearedAt: new Date().toISOString()
+            };
+            saveTombstoneData();
+        }
+
+        function removeDateClearedTombstone(dateStr) {
+            if (deletedTombstone.dates && deletedTombstone.dates[dateStr]) {
+                delete deletedTombstone.dates[dateStr];
+                saveTombstoneData();
+            }
+        }
+
+        let autoSyncDebounceTimer = null;
+        function triggerInstantCloudSync() {
+            saveCurrentDateData();
+            if (autoSyncDebounceTimer) clearTimeout(autoSyncDebounceTimer);
+            autoSyncDebounceTimer = setTimeout(async () => {
+                if (isGdriveConnected && gdriveAccessToken) {
+                    await uploadDataToGdrive(true);
+                }
+            }, 1000);
+        }
+
+        let backgroundSyncInterval = null;
+        function startBackgroundAutoSync() {
+            if (backgroundSyncInterval) clearInterval(backgroundSyncInterval);
+            backgroundSyncInterval = setInterval(async () => {
+                if (isGdriveConnected && gdriveAccessToken) {
+                    await syncFromGoogleDrive(true); // background quiet mode
+                }
+            }, 30000); // 每 30 秒自動對齊
+        }
+
+
+async function syncFromGoogleDrive(isBackground = false) {
+            if (!gdriveAccessToken) return;
+            try {
+                if (!isBackground) {
+                    showTemporarySaveNotice('正在與 Google Drive 雲端雙向對齊中...');
+                }
+                gdriveFolderId = await getOrCreateGdriveFolder(GDRIVE_FOLDER_NAME, null);
+                gdriveAttachmentsFolderId = await getOrCreateGdriveFolder(GDRIVE_ATTACHMENTS_FOLDER_NAME, gdriveFolderId);
+
+                let updatedLocally = false;
+
+                const masterFile = await searchGdriveFile(GDRIVE_FILE_NAME, gdriveFolderId);
+                if (masterFile) {
+                    const cloudJournalData = await downloadGdriveFileContent(masterFile.id);
+                    if (cloudJournalData) {
+                        // 讀取並合併雲端傳來的刪除追蹤清單 (Tombstone)
+                        if (cloudJournalData._tombstone) {
+                            if (cloudJournalData._tombstone.files) {
+                                cloudJournalData._tombstone.files.forEach(f => {
+                                    if (!deletedTombstone.files.includes(f)) deletedTombstone.files.push(f);
+                                });
+                            }
+                            if (cloudJournalData._tombstone.dates) {
+                                Object.keys(cloudJournalData._tombstone.dates).forEach(d => {
+                                    if (!deletedTombstone.dates[d]) deletedTombstone.dates[d] = cloudJournalData._tombstone.dates[d];
+                                });
+                            }
+                            saveTombstoneData();
+                        }
+
+                        // 合併雲端與本機資料，嚴格排除 Tombstone 記錄的已刪除項目
+                        Object.keys(cloudJournalData).forEach(d => {
+                            if (d === '_tombstone') return;
+                            
+                            // 若該日期在 Tombstone 中有清空紀錄，且清空時間晚於雲端更新時間，則排除雲端資料
+                            if (deletedTombstone.dates && deletedTombstone.dates[d] && deletedTombstone.dates[d].clearedAt) {
+                                const clearedAt = new Date(deletedTombstone.dates[d].clearedAt).getTime();
+                                const cloudUpdatedAt = cloudJournalData[d].updatedAt ? new Date(cloudJournalData[d].updatedAt).getTime() : 0;
+                                if (cloudUpdatedAt <= clearedAt) {
+                                    return; // 保持本機已清空狀態，不讓雲端舊資料復原！
+                                }
+                            }
+
+                            // 排除在 Tombstone 中被刪除的研報檔案
+                            if (cloudJournalData[d].files && Array.isArray(cloudJournalData[d].files)) {
+                                cloudJournalData[d].files = cloudJournalData[d].files.filter(f => 
+                                    !deletedTombstone.files.includes(f.name) && 
+                                    !deletedTombstone.files.includes(f.gdriveFileId)
+                                );
+                            }
+
+                            journalData[d] = { ...journalData[d], ...cloudJournalData[d] };
+                        });
+
+                        saveAllData();
+                        updatedLocally = true;
+                    }
+                }
+
+                const calFile = await searchGdriveFile(GDRIVE_CALENDAR_FILE_NAME, gdriveFolderId);
+                if (calFile) {
+                    const cloudCalData = await downloadGdriveFileContent(calFile.id);
+                    if (cloudCalData) {
+                        calendarEvents = { ...calendarEvents, ...cloudCalData };
+                        saveCalendarData();
+                        updatedLocally = true;
+                    }
+                }
+
+                if (updatedLocally) {
+                    loadDateData(currentDate);
+                    updateScoreUI();
+                }
+
+                if (!isBackground) {
+                    showTemporarySaveNotice('✅ 雲端資料與研報夾即時對齊完成！');
+                } else {
+                    const saveStatus = document.getElementById('save-status');
+                    if (saveStatus) {
+                        saveStatus.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> 🟢 雲端背景已對齊 (' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) + ')';
+                        safeCreateIcons();
+                    }
+                }
+            } catch (e) {
+                console.error('Google Drive Sync Error:', e);
+            }
+        }
+
+        async function uploadDataToGdrive(isSilent = false) {
+            if (!isGdriveConnected || !gdriveAccessToken) return;
+            try {
+                if (!gdriveFolderId) gdriveFolderId = await getOrCreateGdriveFolder(GDRIVE_FOLDER_NAME, null);
+
+                // 將 Tombstone 附加於上傳 JSON 中，達成跨裝置同步刪除狀態
+                const payload = { ...journalData, _tombstone: deletedTombstone };
+
+                await uploadOrUpdateGdriveFile(GDRIVE_FILE_NAME, 'application/json', JSON.stringify(payload), gdriveFolderId);
+                await uploadOrUpdateGdriveFile(GDRIVE_CALENDAR_FILE_NAME, 'application/json', JSON.stringify(calendarEvents), gdriveFolderId);
+
+                if (!isSilent) {
+                    showTemporarySaveNotice('✅ 已即時寫入 Google Drive 雲端');
+                } else {
+                    const saveStatus = document.getElementById('save-status');
+                    if (saveStatus) {
+                        saveStatus.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> 🟢 異動已即時推推至雲端 (' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) + ')';
+                        safeCreateIcons();
+                    }
+                }
+            } catch (e) {
+                console.warn('Gdrive Auto Upload Warning:', e);
+            }
+        }
+
+        async function getOrCreateGdriveFolder(folderName, parentFolderId) {
+            let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+            if (parentFolderId) {
+                query += ` and '${parentFolderId}' in parents`;
+            }
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`, {
+                headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+            });
+            const data = await res.json();
+            if (data.files && data.files.length > 0) {
+                return data.files[0].id;
+            } else {
+                const body = { name: folderName, mimeType: 'application/vnd.google-apps.folder' };
+                if (parentFolderId) body.parents = [parentFolderId];
+
+                const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${gdriveAccessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const folderData = await createRes.json();
+                return folderData.id;
+            }
+        }
+
+        async function uploadStandaloneBinaryFileToGdrive(fileObj) {
+            if (!isGdriveConnected || !gdriveAccessToken) return null;
+            try {
+                if (!gdriveFolderId) gdriveFolderId = await getOrCreateGdriveFolder(GDRIVE_FOLDER_NAME, null);
+                if (!gdriveAttachmentsFolderId) gdriveAttachmentsFolderId = await getOrCreateGdriveFolder(GDRIVE_ATTACHMENTS_FOLDER_NAME, gdriveFolderId);
+
+                const metadata = { name: fileObj.name, parents: [gdriveAttachmentsFolderId] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', fileObj);
+
+                const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${gdriveAccessToken}` },
+                    body: form
+                });
+                return await res.json();
+            } catch (e) {
+                console.error('Upload standalone binary file error:', e);
+                return null;
+            }
+        }
+
+        async function searchGdriveFile(filename, folderId) {
+            const query = `name='${filename}' and '${folderId}' in parents and trashed=false`;
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`, {
+                headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+            });
+            const data = await res.json();
+            return (data.files && data.files.length > 0) ? data.files[0] : null;
+        }
+
+        async function downloadGdriveFileContent(fileId) {
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { Authorization: `Bearer ${gdriveAccessToken}` }
+            });
+            return await res.json();
+        }
+
+        async function uploadOrUpdateGdriveFile(filename, mimeType, content, folderId) {
+            const existingFile = await searchGdriveFile(filename, folderId);
+            const metadata = { name: filename, mimeType: mimeType, parents: existingFile ? [] : [folderId] };
+
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', new Blob([content], { type: mimeType }));
+
+            const url = existingFile 
+                ? `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=multipart`
+                : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+
+            await fetch(url, {
+                method: existingFile ? 'PATCH' : 'POST',
+                headers: { Authorization: `Bearer ${gdriveAccessToken}` },
+                body: form
+            });
+        }
+
+        // --- Score Calculation Logic ---
+        window.calculateDayScore = function(entry) {
+            if (!entry) return { total: 0, invScore: 0, resScore: 0, diaScore: 0, reaScore: 0, worScore: 0, invSubScores: {} };
+
+            let invScore = 0;
+            const invSubScores = {};
+
+            const invKeys = Object.keys(investmentFieldLabels);
+            invKeys.forEach(k => {
+                if (entry[k] && entry[k].trim() !== '') {
+                    invSubScores[k] = 3;
+                    invScore += 3;
+                } else {
+                    invSubScores[k] = 0;
+                }
+            });
+
+            let hasRes = false;
+            if (entry.researchSummary && entry.researchSummary.trim() !== '') hasRes = true;
+            if (entry.files && entry.files.length > 0) hasRes = true;
+            const resScore = hasRes ? 20 : 0;
+
+            const diaScore = entry.diaryText ? 10 : 0;
+
+            let reaFilled = 0;
+            if (entry.readingBookTitle && entry.readingBookTitle.trim() !== '') reaFilled++;
+            if (entry.readingBookUrl && entry.readingBookUrl.trim() !== '') reaFilled++;
+            if ((entry.readingText && entry.readingText.trim() !== '') || (entry.readingAiInsights && entry.readingAiInsights.trim() !== '')) reaFilled++;
+            const reaScore = parseFloat(((20 / 3) * reaFilled).toFixed(1));
+
+            let worFilled = 0;
+            if (entry.workoutType && entry.workoutType.trim() !== '') worFilled++;
+            if (entry.workoutDuration && entry.workoutDuration.trim() !== '') worFilled++;
+            if (entry.workoutText && entry.workoutText.trim() !== '') worFilled++;
+            const worScore = parseFloat(((20 / 3) * worFilled).toFixed(1));
+
+            const rawTotal = invScore + resScore + diaScore + reaScore + worScore;
+            const total = parseFloat(rawTotal.toFixed(1));
+
+            return {
+                total,
+                invScore,
+                resScore,
+                diaScore,
+                reaScore,
+                worScore,
+                invSubScores
+            };
+        };
+
+        window.updateScoreUI = function() {
+            const entry = journalData[currentDate] || {};
+            const scores = calculateDayScore(entry);
+
+            const scoreDisplay = document.getElementById('top-total-score');
+            if (scoreDisplay) scoreDisplay.textContent = scores.total;
+
+            const invMain = document.getElementById('score-investment-main');
+            if (invMain) invMain.textContent = scores.invScore;
+
+            Object.keys(investmentFieldLabels).forEach(k => {
+                const subSpan = document.getElementById('score-' + k);
+                if (subSpan) {
+                    const sc = scores.invSubScores[k] || 0;
+                    subSpan.textContent = sc + '/3分';
+                    if (sc > 0) {
+                        subSpan.className = "text-[11px] font-semibold text-rose-900 bg-rose-100/80 px-2 py-0.5 rounded border border-rose-200/80";
+                    } else {
+                        subSpan.className = "text-[11px] font-medium text-stone-400 bg-stone-50 px-2 py-0.5 rounded border border-stone-200";
+                    }
+                }
+            });
+
+            const resMain = document.getElementById('score-research-main');
+            if (resMain) resMain.textContent = scores.resScore;
+
+            const diaMain = document.getElementById('score-diary-main');
+            if (diaMain) diaMain.textContent = scores.diaScore;
+
+            const reaMain = document.getElementById('score-reading-main');
+            if (reaMain) reaMain.textContent = scores.reaScore;
+
+            const worMain = document.getElementById('score-workout-main');
+            if (worMain) worMain.textContent = scores.worScore;
+
+            renderDonutPieChart(scores);
+            checkDisciplineMilestones();
+        };
+
+        window.renderDonutPieChart = function(scores) {
+            const invLen = scores.invScore;
+            const resLen = scores.resScore;
+            const diaLen = scores.diaScore;
+            const reaLen = scores.reaScore;
+            const worLen = scores.worScore;
+
+            let cumulative = 0;
+
+            function updateSlice(id, length) {
+                const circle = document.getElementById(id);
+                if (circle) {
+                    circle.setAttribute('stroke-dasharray', length + ' ' + (100 - length));
+                    circle.setAttribute('stroke-dashoffset', -cumulative);
+                }
+                cumulative += length;
+            }
+
+            updateSlice('pie-inv', invLen);
+            updateSlice('pie-res', resLen);
+            updateSlice('pie-dia', diaLen);
+            updateSlice('pie-rea', reaLen);
+            updateSlice('pie-wor', worLen);
+        };
+
+        window.switchMainTab = function(tabId, btnElem) {
+            const tabs = ['daily-input', 'overview-view', 'yearly-calendar', 'history-search', 'settings-backup'];
+            tabs.forEach(t => {
+                const elem = document.getElementById('tab-' + t);
+                if (elem) elem.classList.add('hidden');
+            });
+            
+            const targetTab = document.getElementById('tab-' + tabId);
+            if (targetTab) targetTab.classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnElem) btnElem.classList.add('active');
+
+            const quickJumpBar = document.getElementById('module-quick-jump-bar');
+            if (quickJumpBar) {
+                if (tabId === 'daily-input') {
+                    quickJumpBar.classList.remove('hidden');
+                } else {
+                    quickJumpBar.classList.add('hidden');
+                }
+            }
+
+            if (tabId === 'yearly-calendar') {
+                renderFullYearCalendar();
+                setTimeout(scrollToCurrentMonthCard, 150);
+            } else if (tabId === 'overview-view') {
+                renderOverview();
+            }
+        };
+
+        window.scrollToModule = function(moduleId) {
+            const elem = document.getElementById(moduleId);
+            if (elem) {
+                const headerHeight = document.getElementById('main-header').offsetHeight || 120;
+                const elementPosition = elem.getBoundingClientRect().top + window.pageYOffset;
+                const offsetPosition = elementPosition - headerHeight - 10;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        };
+
+        window.clearInvestmentNotes = function() {
+            if (confirm('確定要清空當日所有 10 項投資筆記的內容嗎？\n(清空後方便您重新輸入，此動作不會影響其他模組)')) {
+                const invFields = [
+                    'inv-global-stock',
+                    'inv-global-single-stock',
+                    'inv-past-econ-data',
+                    'inv-upcoming-econ-data',
+                    'inv-us-earnings',
+                    'inv-fx-rate',
+                    'inv-tw-market',
+                    'inv-sector-performance',
+                    'inv-review-learnings',
+                    'inv-next-day-plan'
+                ];
+                invFields.forEach(id => {
+                    const elem = document.getElementById(id);
+                    if (elem) {
+                        elem.value = '';
+                        autoExpandTextarea(elem);
+                    }
+                });
+                recordDateCleared(currentDate); // 記錄至刪除 Tombstone
+                saveCurrentDateData();
+                updateScoreUI();
+                uploadDataToGdrive();
+                showTemporarySaveNotice('🧹 已成功清空當日投資筆記所有儲存格！');
+            }
+        };
+
+        window.exportInvestmentWordFile = function() {
+            try {
+                const entry = journalData[currentDate] || {};
+                const dateObj = new Date(currentDate);
+                const daysOfWeek = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const dayOfWeekStr = daysOfWeek[dateObj.getDay()];
+                
+                const yearStr = dateObj.getFullYear();
+                const monthStr = dateObj.getMonth() + 1;
+                const dayStr = dateObj.getDate();
+
+                let docContent = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>投資筆記 - " + currentDate + "</title><style>body { font-family: '新細明體', 'PMingLiU', serif; font-size: 12pt; line-height: 1.6; } .date-title { font-size: 12pt; font-weight: bold; text-decoration: underline; margin-bottom: 16pt; } .topic-header { font-size: 12pt; font-weight: bold; margin-top: 12pt; margin-bottom: 4pt; color: #000000; } .topic-content { font-size: 12pt; margin-bottom: 12pt; white-space: pre-wrap; text-indent: 0; }</style></head><body><div class=\"date-title\">日期： " + yearStr + " 年  " + monthStr + " 月  " + dayStr + "  日（" + dayOfWeekStr + "）</div>";
+
+                Object.keys(investmentFieldLabels).forEach(key => {
+                    const label = investmentFieldLabels[key].replace(/^[0-9]+\.\s*/, '');
+                    const val = (entry[key] && entry[key].trim() !== '') ? entry[key].trim() : '（無）';
+                    const formattedVal = val.split('\n').join('<br/>');
+                    docContent += "<div class=\"topic-header\">" + label + "</div><div class=\"topic-content\">" + formattedVal + "</div>";
+                });
+
+                docContent += "</body></html>";
+
+                const blob = new Blob(['\ufeff' + docContent], { type: 'application/msword;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "hawk-紀律檢查表" + yearStr + String(monthStr).padStart(2, '0') + String(dayStr).padStart(2, '0') + ".doc";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('匯出 Word 時發生錯誤：' + e.message);
+            }
+        };
+
+        window.openDetailModal = function(dateStr) {
+            const entry = journalData[dateStr];
+            if (!entry) return;
+
+            const scores = calculateDayScore(entry);
+
+            const modalTitle = document.getElementById('modal-date-title');
+            if (modalTitle) modalTitle.textContent = dateStr + " 完整功課與紀錄全文 （" + scores.total + "/100分）";
+
+            const body = document.getElementById('modal-body-content');
+            if (body) {
+                let htmlSections = [];
+
+                const filledInvFields = [];
+                Object.keys(investmentFieldLabels).forEach(key => {
+                    if (entry[key] && entry[key].trim() !== '') {
+                        filledInvFields.push({
+                            label: investmentFieldLabels[key],
+                            value: entry[key]
+                        });
+                    }
+                });
+
+                if (filledInvFields.length > 0) {
+                    htmlSections.push('<div class="space-y-3 bg-rose-50/15 p-4 rounded-xl border border-rose-200/50"><div class="font-bold text-rose-900 text-sm flex items-center border-b border-rose-200/50 pb-2"><span class="mr-2">📈</span> 投資筆記完整內容 (' + filledInvFields.length + '/10 項，得分: ' + scores.invScore + '/30分)</div><div class="space-y-3 pl-1">' +
+                        filledInvFields.map(f => '<div class="space-y-1"><div class="font-semibold text-xs text-stone-700">' + f.label + '：</div><p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/95 p-2.5 rounded-lg border border-rose-100/50">' + f.value + '</p></div>').join('') +
+                        '</div></div>');
+                }
+
+                if (entry.researchSummary || (entry.files && entry.files.length > 0)) {
+                    let filesHTML = '';
+                    if (entry.files && entry.files.length > 0) {
+                        filesHTML = entry.files.map((file, idx) => `
+                            <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                                <div class="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                    <span class="font-bold text-xs text-slate-800">📄 研報附件 ${idx + 1}：${file.name} (${file.size})</span>
+                                    <div class="space-x-1">
+                                        ${file.gdriveWebViewLink ? `<a href="${file.gdriveWebViewLink}" target="_blank" class="text-[11px] bg-emerald-50 text-emerald-800 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">☁️ 在 Drive 查看</a>` : ''}
+                                        ${file.dataUrl ? `<button onclick="downloadFileObj(${idx}, '${dateStr}')" class="text-[11px] bg-slate-100 text-slate-700 hover:bg-slate-200 px-2 py-0.5 rounded">📥 下載研報</button>` : ''}
+                                    </div>
+                                </div>
+                                <p class="text-xs text-stone-700 whitespace-pre-wrap">${file.summaryNotes || '（無個別心得）'}</p>
+                            </div>
+                        `).join('');
+                    }
+
+                    htmlSections.push('<div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200"><div class="font-bold text-slate-900 text-sm flex items-center border-b border-slate-200 pb-2"><span class="mr-2">📄</span> 研究報告上傳與重點結論 (得分: ' + scores.resScore + '/20分)</div>' +
+                        (filesHTML ? '<div class="space-y-2.5 mt-2">' + filesHTML + '</div>' : '') +
+                        (entry.researchSummary ? '<div class="space-y-1 mt-2"><div class="font-semibold text-xs text-slate-800">總體重點及結論：</div><p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-2.5 rounded-lg border border-slate-200">' + entry.researchSummary + '</p></div>' : '') +
+                        '</div>');
+                }
+
+                if (entry.diaryText) {
+                    htmlSections.push('<div class="space-y-2 bg-amber-50/40 p-4 rounded-xl border border-amber-200"><div class="font-bold text-amber-900 text-sm flex items-center border-b border-amber-200 pb-2"><span class="mr-2">✍️</span> 日記 (Daily Thoughts) (得分: ' + scores.diaScore + '/10分)</div><p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-2.5 rounded-lg border border-amber-100">' + entry.diaryText + '</p></div>');
+                }
+
+                if (entry.readingText || entry.readingBookTitle || entry.readingBookUrl) {
+                    htmlSections.push('<div class="space-y-2.5 bg-teal-50/50 p-4 rounded-xl border border-teal-200"><div class="font-bold text-teal-900 text-sm flex items-center border-b border-teal-200 pb-2"><span class="mr-2">📚</span> 讀書心得 (得分: ' + scores.reaScore + '/20分)</div>' +
+                        (entry.readingBookTitle ? '<div class="text-xs font-bold text-teal-950">📖 書名/章節：' + entry.readingBookTitle + '</div>' : '') +
+                        (entry.readingBookUrl ? '<div class="text-xs text-blue-700">🔗 書籍參考網址：<a href="' + entry.readingBookUrl + '" target="_blank" class="underline hover:text-blue-900">' + entry.readingBookUrl + '</a></div>' : '') +
+                        (entry.readingText ? '<p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-2.5 rounded-lg border border-teal-100">' + entry.readingText + '</p>' : '') +
+                        '</div>');
+                }
+
+                if (entry.workoutText || entry.workoutType || entry.workoutDuration) {
+                    htmlSections.push('<div class="space-y-2.5 bg-sky-50/50 p-4 rounded-xl border border-sky-200"><div class="font-bold text-sky-900 text-sm flex items-center border-b border-sky-200 pb-2"><span class="mr-2">🏃</span> 運動紀錄 (得分: ' + scores.worScore + '/20分)</div><div class="text-xs text-sky-950 font-semibold">項目：' + (entry.workoutType || '未設定') + ' ‧ 時長/組數：' + (entry.workoutDuration || '未設定') + '</div>' +
+                        (entry.workoutText ? '<p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-2.5 rounded-lg border border-sky-100">' + entry.workoutText + '</p>' : '') +
+                        '</div>');
+                }
+
+                if (entry.goldenQuoteText || entry.pekingOperaText) {
+                    const qText = entry.goldenQuoteText || entry.pekingOperaText;
+                    htmlSections.push('<div class="space-y-2 bg-amber-50/40 p-4 rounded-xl border border-amber-200"><div class="font-bold text-amber-900 text-sm flex items-center border-b border-amber-200 pb-2"><span class="mr-2">💡</span> 金句紀錄 (自由紀錄)</div><p class="text-xs text-stone-800 whitespace-pre-wrap leading-relaxed bg-white/80 p-2.5 rounded-lg border border-amber-100">' + qText + '</p></div>');
+                }
+
+                if (htmlSections.length === 0) {
+                    body.innerHTML = '<p class="text-stone-400 text-xs italic text-center py-6">該當日尚未填寫任何功課內容。</p>';
+                } else {
+                    body.innerHTML = htmlSections.join('');
+                }
+            }
+
+            const jumpBtn = document.getElementById('modal-jump-edit-btn');
+            if (jumpBtn) {
+                jumpBtn.onclick = function() {
+                    currentDate = dateStr;
+                    const picker = document.getElementById('current-date-picker');
+                    if (picker) picker.value = currentDate;
+                    updateDateDisplay();
+                    loadDateData(currentDate);
+                    switchMainTab('daily-input');
+                    closeModal();
+                };
+            }
+
+            const modal = document.getElementById('entry-detail-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            const modal = document.getElementById('entry-detail-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.switchOverviewMode = function(mode) {
+            ['day', 'week', 'month'].forEach(m => {
+                const container = document.getElementById('overview-' + m + '-container');
+                if (container) container.classList.add('hidden');
+
+                const btn = document.getElementById('view-mode-' + m);
+                if (btn) btn.className = "px-3.5 py-1.5 text-xs font-medium rounded-md text-stone-600 hover:text-stone-900 transition";
+            });
+
+            const activeContainer = document.getElementById('overview-' + mode + '-container');
+            if (activeContainer) activeContainer.classList.remove('hidden');
+
+            const activeBtn = document.getElementById('view-mode-' + mode);
+            if (activeBtn) activeBtn.className = "px-3.5 py-1.5 text-xs font-medium rounded-md bg-white text-stone-800 shadow-sm transition";
+
+            if (mode === 'day') renderDailyCards();
+            if (mode === 'week') renderWeeklySummaries();
+            if (mode === 'month') renderMonthlyCalendar();
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            safeCreateIcons();
+            checkOAuthRedirectHash();
+            
+            try {
+                const dateInput = document.getElementById('current-date-picker');
+                if (dateInput) dateInput.value = currentDate;
+                updateDateDisplay();
+                // Clear current date entry to ensure clean slate for user testing
+                if (journalData[currentDate]) {
+                    journalData[currentDate] = {};
+                }
+                loadDateData(currentDate);
+                updateScoreUI();
+
+                const clientIdInput = document.getElementById('gdrive-client-id-input');
+                if (clientIdInput && googleClientId) clientIdInput.value = googleClientId;
+
+
+
+
+                Object.keys(fields).forEach(id => {
+                    const elem = document.getElementById(id);
+                    if (elem) {
+                        elem.addEventListener('input', function() {
+                            if (journalData[currentDate] && deletedTombstone.dates && deletedTombstone.dates[currentDate]) {
+                                removeDateClearedTombstone(currentDate); // 當使用者重新輸入文字時，解除該日期的清空 Tombstone 狀態
+                            }
+                            triggerInstantCloudSync();
+                            updateScoreUI();
+                        });
+                    }
+                });
+
+                initAutoExpandTextareas();
+                updateScoreUI();
+
+                if (dateInput) {
+                    dateInput.addEventListener('change', function(e) {
+                        currentDate = e.target.value;
+                        updateDateDisplay();
+                        loadDateData(currentDate);
+                        updateScoreUI();
+                    });
+                }
+
+                const prevBtn = document.getElementById('prev-day-btn');
+                if (prevBtn) prevBtn.addEventListener('click', function() { changeDateByDays(-1); });
+
+                const nextBtn = document.getElementById('next-day-btn');
+                if (nextBtn) nextBtn.addEventListener('click', function() { changeDateByDays(1); });
+
+                const todayBtn = document.getElementById('today-btn');
+                if (todayBtn) {
+                    todayBtn.addEventListener('click', function() {
+                        currentDate = getTodayString();
+                        if (dateInput) dateInput.value = currentDate;
+                        updateDateDisplay();
+                        loadDateData(currentDate);
+                        updateScoreUI();
+                    });
+                }
+
+                const wordExportBtn = document.getElementById('export-word-btn');
+                if (wordExportBtn) {
+                    wordExportBtn.addEventListener('click', exportInvestmentWordFile);
+                }
+
+                const saveBtn = document.getElementById('manual-save-btn');
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', function() {
+                        saveCurrentDateData();
+                        updateScoreUI();
+                        uploadDataToGdrive();
+                        showTemporarySaveNotice('已手動儲存並成功同步雲端！');
+                    });
+                }
+
+                const copyPromptBtn = document.getElementById('copy-prompt-btn');
+                if (copyPromptBtn) {
+                    copyPromptBtn.addEventListener('click', function() {
+                        const promptText = "請幫我針對這份研究報告進行深度分析與總結，請包含以下4個部分：\n1. 核心觀點與投資評級\n2. 產業趨勢與催化劑（Catalysts）\n3. 財務預測與目標價估算細節\n4. 主要下行風險與不確定因素";
+                        if (navigator.clipboard) {
+                            navigator.clipboard.writeText(promptText).then(function() {
+                                alert('Gemini NotebookLM 研報提問 Prompt 已成功複製到剪貼簿！');
+                            }).catch(function() {
+                                fallbackCopyText(promptText);
+                            });
+                        } else {
+                            fallbackCopyText(promptText);
+                        }
+                    });
+                }
+
+                initDropZone();
+
+                const exportBtn = document.getElementById('export-json-btn');
+                if (exportBtn) exportBtn.addEventListener('click', exportDataJSON);
+
+                const triggerImpBtn = document.getElementById('trigger-import-btn');
+                const impFile = document.getElementById('import-json-file');
+                if (triggerImpBtn && impFile) {
+                    triggerImpBtn.addEventListener('click', function() { impFile.click(); });
+                    impFile.addEventListener('change', importDataJSON);
+                }
+
+                const loadDemoBtn = document.getElementById('load-demo-btn');
+                if (loadDemoBtn) loadDemoBtn.addEventListener('click', loadDemoData);
+
+                const calPrevYear = document.getElementById('calendar-prev-year-btn');
+                if (calPrevYear) {
+                    calPrevYear.addEventListener('click', function() {
+                        currentCalendarYear--;
+                        renderFullYearCalendar();
+                setTimeout(scrollToCurrentMonthCard, 150);
+                    });
+                }
+
+                const calNextYear = document.getElementById('calendar-next-year-btn');
+                if (calNextYear) {
+                    calNextYear.addEventListener('click', function() {
+                        currentCalendarYear++;
+                        renderFullYearCalendar();
+                setTimeout(scrollToCurrentMonthCard, 150);
+                    });
+                }
+
+                const calPrev = document.getElementById('cal-prev-month');
+                if (calPrev) {
+                    calPrev.addEventListener('click', function() {
+                        currentCalendarMonth.setMonth(currentCalendarMonth.getMonth() - 1);
+                        renderMonthlyCalendar();
+                    });
+                }
+
+                const calNext = document.getElementById('cal-next-month');
+                if (calNext) {
+                    calNext.addEventListener('click', function() {
+                        currentCalendarMonth.setMonth(currentCalendarMonth.getMonth() + 1);
+                        renderMonthlyCalendar();
+                    });
+                }
+
+                const execSearchBtn = document.getElementById('execute-search-btn');
+                const searchInput = document.getElementById('search-keyword-input');
+                if (execSearchBtn) execSearchBtn.addEventListener('click', executeSearch);
+                if (searchInput) {
+                    searchInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') executeSearch();
+                    });
+                }
+            } catch (err) {
+                console.error('Initialization error caught safely:', err);
+            }
+        });
+
+        function fallbackCopyText(text) {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            alert('Gemini NotebookLM 研報提問 Prompt 已成功複製到剪貼簿！');
+        }
+
+        function getTodayString() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return year + '-' + month + '-' + day;
+        }
+
+        function changeDateByDays(days) {
+            const d = new Date(currentDate);
+            d.setDate(d.getDate() + days);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            currentDate = year + '-' + month + '-' + day;
+            const picker = document.getElementById('current-date-picker');
+            if (picker) picker.value = currentDate;
+            updateDateDisplay();
+            loadDateData(currentDate);
+            updateScoreUI();
+        }
+
+        function updateDateDisplay() {
+            document.querySelectorAll('.display-selected-date').forEach(el => {
+                el.textContent = currentDate;
+            });
+        }
+
+        function loadAllData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    return data ? JSON.parse(data) : {};
+                }
+            } catch (e) {}
+            return memoryStorageFallback;
+        }
+
+        function saveAllData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+                }
+            } catch (e) {}
+            memoryStorageFallback = journalData;
+        }
+
+        function loadCalendarData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const data = localStorage.getItem(CALENDAR_STORAGE_KEY);
+                    return data ? JSON.parse(data) : {};
+                }
+            } catch (e) {}
+            return {};
+        }
+
+        function saveCalendarData() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(calendarEvents));
+                }
+            } catch (e) {}
+        }
+
+        function loadDateData(dateStr) {
+            const entry = journalData[dateStr] || {};
+            
+            Object.keys(fields).forEach(id => {
+                const key = fields[id];
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.value = entry[key] || '';
+                    if (elem.tagName.toLowerCase() === 'textarea') {
+                        autoExpandTextarea(elem);
+                    }
+                }
+            });
+
+            renderResearchCards(entry.files || []);
+        }
+
+        function saveCurrentDateData() {
+            if (!journalData[currentDate]) {
+                journalData[currentDate] = {};
+            }
+
+            const entry = journalData[currentDate];
+
+            Object.keys(fields).forEach(id => {
+                const key = fields[id];
+                const elem = document.getElementById(id);
+                if (elem) {
+                    entry[key] = elem.value;
+                }
+            });
+
+            entry.updatedAt = new Date().toISOString();
+            saveAllData();
+
+            const saveStatus = document.getElementById('save-status');
+            if (saveStatus) {
+                saveStatus.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> 已自動儲存 (' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) + ')';
+                safeCreateIcons();
+            }
+        }
+
+        function showTemporarySaveNotice(msg) {
+            const saveStatus = document.getElementById('save-status');
+            if (saveStatus) {
+                saveStatus.innerHTML = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 mr-1">✓</i> ' + msg;
+                safeCreateIcons();
+            }
+        }
+
+        function initDropZone() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('report-file-input');
+            if (!dropZone || !fileInput) return;
+
+            dropZone.addEventListener('click', function() { fileInput.click(); });
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('border-slate-500', 'bg-slate-50');
+            });
+
+            dropZone.addEventListener('dragleave', function() {
+                dropZone.classList.remove('border-slate-500', 'bg-slate-50');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('border-slate-500', 'bg-slate-50');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFilesAdded(e.dataTransfer.files);
+                }
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleFilesAdded(e.target.files);
+                }
+            });
+        }
+
+        function handleFilesAdded(fileList) {
+            if (!journalData[currentDate]) journalData[currentDate] = {};
+            if (!journalData[currentDate].files) journalData[currentDate].files = [];
+
+            const filesArray = Array.from(fileList);
+            let processedCount = 0;
+
+            filesArray.forEach(async (f) => {
+                // If Google Drive is connected, upload standalone binary file directly into Google Drive attachments folder!
+                let driveRes = null;
+                if (isGdriveConnected) {
+                    showTemporarySaveNotice(`正在將實體研報 ${f.name} 上傳至 Google Drive...`);
+                    driveRes = await uploadStandaloneBinaryFileToGdrive(f);
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    journalData[currentDate].files.push({
+                        name: f.name,
+                        size: (f.size / 1024 / 1024).toFixed(2) + ' MB',
+                        uploadedAt: new Date().toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'}),
+                        dataUrl: e.target.result,
+                        summaryNotes: '',
+                        gdriveFileId: driveRes ? driveRes.id : null,
+                        gdriveWebViewLink: driveRes ? driveRes.webViewLink : null
+                    });
+                    processedCount++;
+
+                    if (processedCount === filesArray.length) {
+                        saveAllData();
+                        renderResearchCards(journalData[currentDate].files);
+                        updateScoreUI();
+                        uploadDataToGdrive();
+                    }
+                };
+                reader.readAsDataURL(f);
+            });
+        }
+
+        function renderResearchCards(files) {
+            const container = document.getElementById('dynamic-research-cards-container');
+            if (!container) return;
+
+            if (!files || files.length === 0) {
+                const defaultVal = journalData[currentDate] ? (journalData[currentDate].researchSummary || '') : '';
+                container.innerHTML = `
+                    <div class="bg-stone-50/60 p-4 rounded-xl border border-stone-200 space-y-2">
+                        <div class="flex items-center justify-between text-xs font-bold text-stone-700">
+                            <span>📄 預設研究報告重點及結論 (尚未上傳附件)</span>
+                        </div>
+                        <textarea id="research-summary" rows="8" class="auto-expand w-full text-sm rounded-lg border border-stone-200 p-3 bg-white focus:ring-2 focus:ring-slate-700/20 focus:border-slate-700 focus:outline-none transition" placeholder="請填寫本日研究報告重點與結論：
+• 報告標題與出處：
+• 核心投資觀點：
+• 財務預估與目標價估算：
+• 關鍵催化劑與風險：" oninput="updateDefaultResearchSummary(this.value)">${defaultVal}</textarea>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = files.map((file, idx) => `
+                    <div class="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-2.5 card-shadow">
+                        <div class="flex flex-wrap items-center justify-between border-b border-slate-200 pb-2 gap-2">
+                            <div class="flex items-center space-x-2 truncate max-w-[70%]">
+                                <span class="bg-slate-700 text-white text-[11px] font-bold px-2 py-0.5 rounded">研報 ${idx + 1}</span>
+                                <span class="text-xs font-bold text-slate-800 truncate" title="${file.name}">📄 ${file.name}</span>
+                                <span class="text-[10px] text-stone-400 font-normal">(${file.size})</span>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                ${file.gdriveWebViewLink ? `
+                                    <a href="${file.gdriveWebViewLink}" target="_blank" class="inline-flex items-center text-xs bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-md transition shadow-2xs">
+                                        ☁️ 在 Drive 開啟
+                                    </a>
+                                ` : ''}
+                                <button onclick="downloadFileObj(${idx})" class="inline-flex items-center text-xs bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-md transition shadow-2xs" title="下載此研報檔">
+                                    <i data-lucide="download" class="w-3.5 h-3.5 mr-1 text-slate-600">📥</i> 下載研報
+                                </button>
+                                <button onclick="removeFileObj(${idx})" class="inline-flex items-center text-xs bg-white text-red-600 hover:bg-red-50 border border-red-200 px-2.5 py-1 rounded-md transition shadow-2xs" title="刪除此研報">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 mr-1">🗑️</i> 刪除
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea rows="6" class="auto-expand w-full text-sm rounded-lg border border-slate-200 p-3 bg-white focus:ring-2 focus:ring-slate-700/20 focus:border-slate-700 focus:outline-none transition" placeholder="針對「${file.name}」填寫研報重點摘要與核心結論..." oninput="updateFileSummaryNotes(${idx}, this.value)">${file.summaryNotes || ''}</textarea>
+                    </div>
+                `).join('');
+            }
+
+            initAutoExpandTextareas();
+            safeCreateIcons();
+        }
+
+        window.updateDefaultResearchSummary = function(val) {
+            if (!journalData[currentDate]) journalData[currentDate] = {};
+            journalData[currentDate].researchSummary = val;
+            saveCurrentDateData();
+            updateScoreUI();
+            uploadDataToGdrive();
+        };
+
+        window.updateFileSummaryNotes = function(idx, val) {
+            if (journalData[currentDate] && journalData[currentDate].files && journalData[currentDate].files[idx]) {
+                journalData[currentDate].files[idx].summaryNotes = val;
+                saveCurrentDateData();
+                updateScoreUI();
+                uploadDataToGdrive();
+            }
+        };
+
+        window.downloadFileObj = function(idx, targetDateStr) {
+            const dateKey = targetDateStr || currentDate;
+            const entry = journalData[dateKey];
+            if (entry && entry.files && entry.files[idx]) {
+                const file = entry.files[idx];
+                if (file.dataUrl) {
+                    const a = document.createElement('a');
+                    a.href = file.dataUrl;
+                    a.download = file.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } else if (file.gdriveWebViewLink) {
+                    window.open(file.gdriveWebViewLink, '_blank');
+                } else {
+                    alert('此示範檔案未夾帶實體資料內容，無法下載。自己上傳的實體檔案皆可正常點擊下載！');
+                }
+            }
+        };
+
+        window.removeFileObj = function(idx) {
+            if (journalData[currentDate] && journalData[currentDate].files && journalData[currentDate].files[idx]) {
+                const removedFile = journalData[currentDate].files[idx];
+                recordFileDeletion(removedFile.name, removedFile.gdriveFileId); // 記錄至刪除 Tombstone
+                journalData[currentDate].files.splice(idx, 1);
+                saveAllData();
+                renderResearchCards(journalData[currentDate].files);
+                updateScoreUI();
+                uploadDataToGdrive();
+                showTemporarySaveNotice('🗑️ 已成功刪除研報檔案，並防範雲端復原！');
+            }
+        };
+
+        function renderFullYearCalendar() {
+            const gridContainer = document.getElementById('full-year-grid');
+            if (!gridContainer) return;
+
+            const yearTitle = document.getElementById('calendar-year-title');
+            if (yearTitle) yearTitle.textContent = currentCalendarYear + " 年";
+            
+            gridContainer.innerHTML = '';
+
+            const monthNames = ['一月 (Jan)', '二月 (Feb)', '三月 (Mar)', '四月 (Apr)', '五月 (May)', '六月 (Jun)', '七月 (Jul)', '八月 (Aug)', '九月 (Sep)', '十月 (Oct)', '十一月 (Nov)', '十二月 (Dec)'];
+
+            for (let m = 0; m < 12; m++) {
+                const firstDay = new Date(currentCalendarYear, m, 1).getDay();
+                const daysInMonth = new Date(currentCalendarYear, m + 1, 0).getDate();
+
+                let daysHTML = '';
+
+                for (let p = 0; p < firstDay; p++) {
+                    daysHTML += '<div class="bg-stone-50 h-20 rounded"></div>';
+                }
+
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const monthStr = String(m + 1).padStart(2, '0');
+                    const dayStr = String(d).padStart(2, '0');
+                    const dateKey = currentCalendarYear + '-' + monthStr + '-' + dayStr;
+
+                    const calText = calendarEvents[dateKey] || '';
+                    const hasJournal = journalData[dateKey];
+
+                    const todayStr = getTodayString();
+                    const isTodayCell = dateKey === todayStr;
+                    const cellStyle = isTodayCell 
+                        ? 'bg-rose-100/80 border-2 border-rose-600 shadow-md ring-2 ring-rose-400/40 font-bold' 
+                        : 'bg-white border border-stone-200';
+
+                    daysHTML += '<div class="' + cellStyle + ' rounded p-1.5 flex flex-col justify-between h-20 text-xs hover:border-rose-600 transition group relative"><div class="flex items-center justify-between font-bold ' + (isTodayCell ? 'text-rose-950' : 'text-stone-700') + '"><span>' + d + (isTodayCell ? ' <span class="text-[9px] bg-rose-800 text-white px-1 py-0.2 rounded font-extrabold ml-0.5">今天</span>' : '') + '</span>' + (hasJournal ? '<span class="w-2 h-2 rounded-full bg-rose-800" title="已有每日筆記"></span>' : '') + '</div><textarea class="w-full flex-grow text-xs bg-transparent text-rose-950 font-medium focus:bg-white/80 focus:outline-none border-t border-transparent focus:border-rose-300 resize-none leading-tight pt-1" onchange="updateCalendarEvent(\'' + dateKey + '\', this.value)" title="' + calText + '">' + calText + '</textarea></div>';
+                }
+
+                gridContainer.innerHTML += '<div id="month-card-' + m + '" class="bg-stone-50/70 p-3.5 sm:p-4 rounded-xl border border-stone-200 space-y-2.5"><div class="font-bold text-rose-900 text-sm border-b border-stone-200 pb-2 flex items-center justify-between"><span>📅 ' + monthNames[m] + '</span><span class="text-xs text-stone-400 font-normal">' + currentCalendarYear + '</span></div><div class="grid grid-cols-7 gap-1.5 text-center text-xs font-bold text-stone-400 py-1"><div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div></div><div class="grid grid-cols-7 gap-1.5">' + daysHTML + '</div></div>';
+            }
+        }
+
+        window.updateCalendarEvent = function(dateKey, val) {
+            if (val && val.trim() !== '') {
+                calendarEvents[dateKey] = val.trim();
+            } else {
+                delete calendarEvents[dateKey];
+            }
+            saveCalendarData();
+            uploadDataToGdrive();
+        };
+
+        function renderOverview() {
+            switchOverviewMode('day');
+        }
+
+        function getFilledBadges(item) {
+            const badges = [];
+
+            const invTopics = [];
+            if (item.invGlobalStock) invTopics.push('國際股市');
+            if (item.invGlobalSingleStock) invTopics.push('國際個股走勢');
+            if (item.invPastEconData) invTopics.push('前晚總經數據');
+            if (item.invUpcomingEconData) invTopics.push('當晚總經數據');
+            if (item.invUsEarnings) invTopics.push('美股法說');
+            if (item.invFxRate) invTopics.push('匯率');
+            if (item.invTwMarket) invTopics.push('台股走勢量價');
+            if (item.invSectorPerformance) invTopics.push('類股漲跌');
+            if (item.invReviewLearnings) invTopics.push('檢討心得');
+            if (item.invNextDayPlan) invTopics.push('下一日規劃');
+
+            if (invTopics.length > 0) {
+                badges.push({
+                    type: 'investment',
+                    label: '📈 投資筆記 (' + invTopics.length + '/10項)',
+                    subList: invTopics,
+                    colorClass: 'bg-rose-badge'
+                });
+            }
+
+            if (item.researchSummary || (item.files && item.files.length > 0)) {
+                badges.push({
+                    type: 'research',
+                    label: '📄 研究報告摘要',
+                    subList: item.files ? ['研報檔:' + item.files.length + '份'] : [],
+                    colorClass: 'bg-slate-50 text-slate-800 border-slate-200 border'
+                });
+            }
+
+            if (item.diaryText) {
+                badges.push({
+                    type: 'diary',
+                    label: '✍️ 日記',
+                    colorClass: 'bg-amber-50 text-amber-800 border-amber-200 border'
+                });
+            }
+
+            if (item.readingText || item.readingBookTitle) {
+                badges.push({
+                    type: 'reading',
+                    label: '📚 讀書心得 (' + (item.readingBookTitle || '已紀錄') + ')',
+                    colorClass: 'bg-teal-50 text-teal-800 border-teal-200 border'
+                });
+            }
+
+            if (item.workoutText || item.workoutType) {
+                badges.push({
+                    type: 'workout',
+                    label: '🏃 運動紀錄 (' + (item.workoutType || '已紀錄') + ')',
+                    colorClass: 'bg-sky-50 text-sky-800 border-sky-200 border'
+                });
+            }
+
+            if ((item.goldenQuoteText && item.goldenQuoteText.trim() !== '') || (item.pekingOperaText && item.pekingOperaText.trim() !== '')) {
+                badges.push({
+                    type: 'goldenQuote',
+                    label: '💡 金句紀錄',
+                    colorClass: 'bg-amber-50 text-amber-800 border-amber-200 border'
+                });
+            }
+
+            return badges;
+        }
+
+        function renderDailyCards() {
+            const listContainer = document.getElementById('daily-cards-list');
+            if (!listContainer) return;
+
+            const dates = Object.keys(journalData).sort().reverse();
+            const countElem = document.getElementById('total-days-count');
+            if (countElem) countElem.textContent = '共 ' + dates.length + ' 天紀錄';
+
+            if (dates.length === 0) {
+                listContainer.innerHTML = '<p class="col-span-full text-center py-8 text-stone-400 text-sm">尚無紀錄，開始在「每日想法輸入」記錄您的功課吧！</p>';
+                return;
+            }
+
+            listContainer.innerHTML = dates.map(d => {
+                const item = journalData[d];
+                const scores = calculateDayScore(item);
+                const badges = getFilledBadges(item);
+
+                return '<div class="border border-stone-200 rounded-xl p-4 bg-white hover:border-rose-600 hover:shadow-md transition cursor-pointer flex flex-col justify-between space-y-3" onclick="openDetailModal(\'' + d + '\')"><div class="space-y-2.5"><div class="flex items-center justify-between border-b border-stone-100 pb-2"><div class="flex items-center space-x-2"><span class="font-bold text-stone-800 serif text-sm">' + d + '</span><span class="text-xs font-extrabold text-rose-900 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">💯 ' + scores.total + ' 分</span></div><span class="text-[10px] text-stone-400">點擊看全文</span></div><div class="flex flex-wrap gap-1.5 text-[11px]">' +
+                    badges.map(b => '<span class="px-2 py-0.5 rounded font-medium ' + b.colorClass + '">' + b.label + '</span>').join('') +
+                    '</div><p class="text-xs text-stone-600 line-clamp-3">' + (item.invTwMarket || item.invSectorPerformance || item.diaryText || item.researchSummary || '包含多項紀錄細節...') + '</p></div><div class="text-[11px] text-rose-900 font-bold flex items-center justify-end border-t border-stone-100 pt-2">檢視全文與編輯 →</div></div>';
+            }).join('');
+        }
+
+        function renderWeeklySummaries() {
+            const container = document.getElementById('weekly-summary-list');
+            if (!container) return;
+
+            const dates = Object.keys(journalData).sort().reverse();
+
+            if (dates.length === 0) {
+                container.innerHTML = '<p class="text-center py-8 text-stone-400 text-sm">尚無紀錄</p>';
+                return;
+            }
+
+            const weeks = {};
+            dates.forEach(d => {
+                const dateObj = new Date(d);
+                const weekKey = getWeekOfYear(dateObj);
+                if (!weeks[weekKey]) weeks[weekKey] = [];
+                weeks[weekKey].push(d);
+            });
+
+            container.innerHTML = Object.keys(weeks).map(wKey => {
+                const dayList = weeks[wKey];
+                return '<div class="border border-stone-200 rounded-xl p-5 bg-stone-50/50 space-y-4"><div class="flex items-center justify-between border-b border-stone-200 pb-2.5"><h3 class="font-bold text-stone-800 text-sm serif">📅 ' + wKey + ' 功課清單 (' + dayList.length + ' 天紀錄)</h3><span class="text-xs text-stone-500">' + dayList[dayList.length - 1] + ' ~ ' + dayList[0] + '</span></div><div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">' +
+                    dayList.map(d => {
+                        const item = journalData[d];
+                        const scores = calculateDayScore(item);
+                        const badges = getFilledBadges(item);
+                        return '<div class="bg-white p-3.5 rounded-xl border border-stone-200 hover:border-rose-600 hover:shadow transition cursor-pointer flex flex-col justify-between space-y-2.5" onclick="openDetailModal(\'' + d + '\')"><div><div class="font-bold text-stone-800 text-xs border-b border-stone-100 pb-1.5 flex items-center justify-between"><span>📅 ' + d + '</span><span class="text-[11px] font-extrabold text-rose-900 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">' + scores.total + '分</span></div><div class="mt-2 space-y-1.5">' +
+                            (badges.length > 0 ? badges.map(b => '<div class="text-[11px] px-2 py-1 rounded ' + b.colorClass + ' flex flex-col"><span class="font-bold">' + b.label + '</span>' + (b.subList && b.subList.length > 0 ? '<span class="text-[10px] opacity-80 pl-1">├ ' + b.subList.join(', ') + '</span>' : '') + '</div>').join('') : '<p class="text-[10px] text-stone-400 italic">無紀錄</p>') +
+                            '</div></div><div class="text-[10px] text-rose-900 text-right font-bold pt-1">查看全文 →</div></div>';
+                    }).join('') +
+                    '</div></div>';
+            }).join('');
+        }
+
+        function renderMonthlyCalendar() {
+            const year = currentCalendarMonth.getFullYear();
+            const month = currentCalendarMonth.getMonth();
+
+            const titleElem = document.getElementById('cal-month-title');
+            if (titleElem) titleElem.textContent = year + '年 ' + (month + 1) + '月';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const grid = document.getElementById('calendar-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += '<div class="bg-stone-100 min-h-[95px] rounded p-1"></div>';
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const mStr = String(month + 1).padStart(2, '0');
+                const dStr = String(day).padStart(2, '0');
+                const dateKey = year + '-' + mStr + '-' + dStr;
+
+                const entry = journalData[dateKey];
+                const isToday = dateKey === getTodayString();
+                const scores = entry ? calculateDayScore(entry) : null;
+                const badges = entry ? getFilledBadges(entry) : [];
+
+                grid.innerHTML += '<div class="bg-white min-h-[95px] rounded p-2 flex flex-col justify-between text-xs transition hover:shadow-md ' + (entry ? 'border-l-4 border-l-rose-800 cursor-pointer' : 'text-stone-400') + ' ' + (isToday ? 'bg-rose-50/30 font-bold' : '') + '" onclick="' + (entry ? 'openDetailModal(\'' + dateKey + '\')' : '') + '"><div class="flex items-center justify-between"><span class="font-bold text-stone-800 text-sm">' + day + '</span>' + (scores ? '<span class="text-[10px] font-extrabold text-rose-900 bg-rose-50 px-1 py-0.5 rounded border border-rose-200">' + scores.total + '分</span>' : '') + '</div>' +
+                    '<div class="mt-1.5 grid grid-cols-3 gap-1 text-center">' +
+                    badges.map(b => {
+                        let iconChar = '📌';
+                        if (b.type === 'investment') iconChar = '📈';
+                        else if (b.type === 'research') iconChar = '📄';
+                        else if (b.type === 'diary') iconChar = '✍️';
+                        else if (b.type === 'reading') iconChar = '📚';
+                        else if (b.type === 'workout') iconChar = '🏃';
+                        else if (b.type === 'goldenQuote' || b.type === 'pekingOpera') iconChar = '💡';
+
+                        return '<span class="text-sm p-1 rounded border shadow-2xs ' + b.colorClass + '" title="' + b.label + '">' + iconChar + '</span>';
+                    }).join('') +
+                    '</div></div>';
+            }
+        }
+
+        function getWeekOfYear(date) {
+            const target = new Date(date.valueOf());
+            const dayNr = (date.getDay() + 6) % 7;
+            target.setDate(target.getDate() - dayNr + 3);
+            const firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+            }
+            const weekNum = 1 + Math.round((firstThursday - target.valueOf()) / 604800000);
+            return date.getFullYear() + ' 第 ' + weekNum + ' 週';
+        }
+
+        function executeSearch() {
+            const keywordInput = document.getElementById('search-keyword-input');
+            const catFilter = document.getElementById('search-category-filter');
+            const container = document.getElementById('search-results-container');
+            if (!keywordInput || !container) return;
+
+            const keyword = keywordInput.value.trim().toLowerCase();
+            const category = catFilter ? catFilter.value : 'all';
+
+            if (!keyword) {
+                container.innerHTML = '<p class="text-xs text-stone-400 italic">請輸入關鍵字進行檢索...</p>';
+                return;
+            }
+
+            const results = [];
+            Object.keys(journalData).forEach(dateStr => {
+                const item = journalData[dateStr];
+                let matches = false;
+                let matchedText = '';
+
+                const searchFields = [];
+                if (category === 'all' || category === 'investment') {
+                    searchFields.push(item.invGlobalStock, item.invGlobalSingleStock, item.invPastEconData, item.invUpcomingEconData, item.invUsEarnings, item.invFxRate, item.invTwMarket, item.invSectorPerformance, item.invReviewLearnings, item.invNextDayPlan);
+                }
+                if (category === 'all' || category === 'research') {
+                    searchFields.push(item.researchSummary);
+                    if (item.files) item.files.forEach(f => searchFields.push(f.name, f.summaryNotes));
+                }
+                if (category === 'all' || category === 'diary') searchFields.push(item.diaryText);
+                if (category === 'all' || category === 'reading') searchFields.push(item.readingBookTitle, item.readingBookUrl, item.readingText);
+                if (category === 'all' || category === 'workout') searchFields.push(item.workoutType, item.workoutText);
+                if (category === 'all' || category === 'goldenQuote' || category === 'pekingOpera') searchFields.push(item.goldenQuoteText, item.pekingOperaText);
+
+                searchFields.forEach(val => {
+                    if (val && val.toLowerCase().includes(keyword)) {
+                        matches = true;
+                        matchedText += val + ' ';
+                    }
+                });
+
+                if (matches) {
+                    results.push({ dateStr, matchedText });
+                }
+            });
+
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-xs text-stone-500">找不到包含「<span class="font-bold text-stone-700">' + keyword + '</span>」的相關紀錄。</p>';
+                return;
+            }
+
+            container.innerHTML = '<p class="text-xs text-stone-500 mb-2">找到 ' + results.length + ' 筆包含「<span class="font-bold text-stone-800">' + keyword + '</span>」的歷史資料：</p><div class="space-y-3">' +
+                results.map(r => '<div class="border border-stone-200 rounded-lg p-4 bg-stone-50/40 hover:bg-white hover:border-rose-600 transition cursor-pointer" onclick="openDetailModal(\'' + r.dateStr + '\')"><div class="flex items-center justify-between font-bold text-stone-800 text-xs mb-1"><span>📅 ' + r.dateStr + '</span><span class="text-rose-900 font-bold text-[11px]">檢視全文 →</span></div><p class="text-xs text-stone-600 line-clamp-2">' + highlightKeyword(r.matchedText, keyword) + '</p></div>').join('') +
+                '</div>';
+        }
+
+        function highlightKeyword(text, keyword) {
+            const re = new RegExp('(' + keyword + ')', 'gi');
+            return text.replace(re, '<mark class="bg-yellow-200 text-stone-900 rounded px-1">$1</mark>');
+        }
+
+        function exportDataJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ journalData, calendarEvents }, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "daily_journal_backup_" + getTodayString() + "_V16.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importDataJSON(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (imported.journalData) {
+                        journalData = { ...journalData, ...imported.journalData };
+                    } else {
+                        journalData = { ...journalData, ...imported };
+                    }
+
+                    if (imported.calendarEvents) {
+                        calendarEvents = { ...calendarEvents, ...imported.calendarEvents };
+                        saveCalendarData();
+                    }
+
+                    saveAllData();
+                    alert('資料庫復原/合併成功！');
+                    loadDateData(currentDate);
+                    updateScoreUI();
+                    uploadDataToGdrive();
+                } catch (err) {
+                    alert('JSON 檔案解析失敗，請確認檔案格式是否正確。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadDemoData() {
+            const demo = {
+                "2026-07-23": {
+                    "invGlobalStock": "美股四大指數反彈，科技股重拾升勢，標普 500 與那斯達克雙雙大漲。市場對晶片法案與 AI 伺服器供應鏈展望正向。",
+                    "invGlobalSingleStock": "NVIDIA 勁揚 3.8%，博通 (AVGO) 與台積電 ADR 聯袂向上衝高，ASML 亦表現亮眼。",
+                    "invPastEconData": "初領失業金人數下降，反映勞動市場具韌性，市場對經濟軟著陸信心增強。",
+                    "invUpcomingEconData": "美國 S&P PMI 採購經理人指數公布。",
+                    "invUsEarnings": "微軟、 Alphabet 盤後法說會。",
+                    "invFxRate": "美元指數微幅拉回，台幣匯率於 32.22 附近小幅回升。",
+                    "invTwMarket": "台股加權指數大漲 280 點，成功站回所有短均線，成交量放大至 3,800 億元。",
+                    "invSectorPerformance": "先進封裝、矽光子、伺服器水冷散熱強勢領漲，金融與傳產平穩。",
+                    "invReviewLearnings": "堅持系統化研究紀律，關鍵趨勢股維持高部位持有。",
+                    "invNextDayPlan": "關注科技巨頭財報法說指引，適度調整高營收動能標的。",
+                    "researchSummary": "台積電 CoWoS 先進封裝產能倍增研究：看好 2027 年供應鏈營收續創新高。",
+                    "files": [
+                        {
+                            "name": "TSMC_CoWoS_Packaging_Report_2026.pdf",
+                            "size": "2.40 MB",
+                            "uploadedAt": "10:15 AM",
+                            "summaryNotes": "1. 核心觀點：先進封裝 CoWoS 產能持續吃緊，設備供應鏈未來兩年成長動能極為強勁。\n2. 催化劑：次世代 AI 晶片出貨量大幅增長。\n3. 風險提示：地緣政治關稅與設備交貨時程。"
+                        }
+                    ],
+                    "diaryText": "今天完成研究與投資筆記，體會到紀律對心態與決策品質的沉澱效果極佳。",
+                    "readingBookTitle": "納瓦爾寶典 (The Almanack of Naval Ravikant)",
+                    "readingBookUrl": "https://www.books.com.tw/products/0010928234",
+                    "readingText": "「槓桿是現代財富創造的關鍵，包含了程式碼、媒體、資本與勞動力。」在投資與研究上，持續累積專長與槓桿。",
+                    "workoutType": "跑步機慢跑",
+                    "workoutDuration": "35分鐘 / 5公里",
+                    "workoutText": "平均心率 142 bpm，狀態穩定，精神飽滿。",
+                    "goldenQuoteText": "「流水不爭先，爭的是滔滔不絕。」於研究與人生，皆需有長遠眼光與持續積累之耐心。"
+                },
+                "2026-07-22": {
+                    "invGlobalStock": "美股四大指數開高走低，銀行股與總經數據引發高檔震盪整理。",
+                    "invGlobalSingleStock": "Apple 收黑K，維持在月線之上；Tesla 空頭拉回；NVDA 撐在月線支撐區。",
+                    "invPastEconData": "數據高於預期，顯示就業漸趨平緩，有利壓抑通膨壓力。",
+                    "invUpcomingEconData": "鮑威爾國會聽證會發言。",
+                    "invUsEarnings": "美光、英特爾財報及展望。",
+                    "invFxRate": "外資持續動態調整，台幣短線維持區間波段震盪。",
+                    "invTwMarket": "台股結算日平穩走高，加權指數收紅，三大法人買超，期貨多單小幅增加。",
+                    "invSectorPerformance": "半導體設備表現平穩，基期較高之個股小幅獲利結案。",
+                    "invReviewLearnings": "多空轉折期落實風險控管，適度調整持有水位與持股結構。",
+                    "invNextDayPlan": "觀察月線支撐力道，高出低進，轉進低基期高成長股。",
+                    "researchSummary": "NVIDIA Blackwell Ultra 水冷散熱滲透率報告：預期 Q4 提升至 40%。",
+                    "files": [
+                        {
+                            "name": "NVIDIA_Blackwell_Ultra_Supply_Chain.pdf",
+                            "size": "1.85 MB",
+                            "uploadedAt": "10:20 AM",
+                            "summaryNotes": "1. 核心觀點： Blackwell Ultra 伺服器水冷散熱滲透率大幅提升。\n2. 關鍵受惠廠商：機殼與水冷板技術龍頭。"
+                        }
+                    ],
+                    "diaryText": "與產業專家討論先進封裝產能預估，獲得一手產業供應鏈觀察，晚上規律運動與閱讀。",
+                    "readingBookTitle": "原則 (Principles by Ray Dalio)",
+                    "readingBookUrl": "https://www.books.com.tw/products/0010782782",
+                    "readingText": "「痛苦加反思等於進步。」建立屬於自己的投資與決策原則，是長期存活的基石。",
+                    "workoutType": "核心重訓",
+                    "workoutDuration": "40分鐘",
+                    "workoutText": "深蹲 4 組、槓鈴硬舉 4 組，訓練強度佳。",
+                    "goldenQuoteText": "「種一棵樹最好的時間是十年前，其次是現在。」不遲疑，當下即是行動最佳時機。"
+                },
+                "2026-07-21": {
+                    "invGlobalStock": "美股三大指數溫和反彈，市場利空去化，科技股重新領漲。",
+                    "invGlobalSingleStock": "NVIDIA 上漲 2.5%，博通 (AVGO) 續創歷史新高。",
+                    "invPastEconData": "核心 PCE 年增率符合預期，通膨壓力持續降溫。",
+                    "invUpcomingEconData": "密西根大學消費者信心指數。",
+                    "invUsEarnings": "特斯拉 (Tesla) 盤後法說會。",
+                    "invFxRate": "美元指數微幅回落至 103.8，台幣升值 5 分。",
+                    "invTwMarket": "台股震盪開高，AI 族群表現強勢，成交量放大至 3,600 億元。",
+                    "invSectorPerformance": "半導體設備、矽光子領漲，生技與營建類股拉回整理。",
+                    "invReviewLearnings": "嚴格執行紀律，獲利入袋部分高基期個股。",
+                    "invNextDayPlan": "密切關注美股科技股財報效應。",
+                    "researchSummary": "矽光子 CPO 技術突破外資評估報告：看好全面量產進度。",
+                    "diaryText": "擬定全週研究計畫，完成 2 份重要報告拆解。",
+                    "readingBookTitle": "致富心態 (The Psychology of Money)",
+                    "readingBookUrl": "https://www.books.com.tw/products/0010881110",
+                    "readingText": "「理財成就無關乎智商，而與你的行為關聯更深。」控管欲望比創造超額收益更為關鍵。",
+                    "workoutType": "戶外騎單車",
+                    "workoutDuration": "60分鐘 / 15公里",
+                    "workoutText": "河濱公園騎行，心率控制在 125 bpm 輕鬆區間。",
+                    "goldenQuoteText": "「知人者智，自知者明。勝人者有力，自勝者強。」"
+                },
+                "2026-07-20": {
+                    "invGlobalStock": "歐美股市高檔盤整，投資人觀望即將公布的科技巨頭財報。",
+                    "invGlobalSingleStock": "微軟與 Alphabet 股價小幅波動，等待財報指引。",
+                    "invPastEconData": "歐洲央行按兵不動，符合市場預期。",
+                    "invUpcomingEconData": "美國初領失業金人數。",
+                    "invUsEarnings": "台積電 ADR 盤前法說會。",
+                    "invFxRate": "USD/TWD 介於 32.20 ~ 32.30 橫盤整理。",
+                    "invTwMarket": "加權指數小跌 15 點，櫃買指數表現相對強勢。",
+                    "invSectorPerformance": "伺服器散熱與 PCB 族群資金流入，塑化與鋼鐵相對疲弱。",
+                    "invReviewLearnings": "市場無明確方向時，控制倉位並保持耐心。",
+                    "invNextDayPlan": "若出現大幅量增，觀察是否突破上方均線反壓。",
+                    "researchSummary": "先進散熱水冷技術產業簡報：滲透率提升預估。",
+                    "diaryText": "陪伴家人散步，整理下半年投資組合資產配置。",
+                    "readingBookTitle": "思考，快與慢 (Thinking, Fast and Slow)",
+                    "readingBookUrl": "https://www.books.com.tw/products/0010558602",
+                    "readingText": "克服系統一的直覺偏誤，用系統二的理性邏輯審視市場極端情緒。",
+                    "workoutType": "啞鈴重訓",
+                    "workoutDuration": "30分鐘",
+                    "workoutText": "上肢肌群鍛鍊，胸大肌與三頭肌。",
+                    "goldenQuoteText": "「凡事豫則立，不豫則廢。」隨時做好充分準備。"
+                }
+            };
+
+            const calendarDemo = {
+                "2026-07-21": "美光財報公布\n鮑威爾國會聽證會",
+                "2026-07-22": "台指期月結算日\n留意開高拉回風險",
+                "2026-07-23": "台積電 CoWoS 產能說明會\n留意概念股波動",
+                "2026-07-28": "Fed FOMC 利率決策\n預期按兵不動",
+                "2026-08-15": "13F 機構持倉申報\n觀望各大對沖基金調倉"
+            };
+
+            journalData = { ...journalData, ...demo };
+            calendarEvents = { ...calendarEvents, ...calendarDemo };
+
+            saveAllData();
+            saveCalendarData();
+            currentDate = '2026-07-23';
+            const picker = document.getElementById('current-date-picker');
+            if (picker) picker.value = currentDate;
+            updateDateDisplay();
+            loadDateData(currentDate);
+            updateScoreUI();
+            uploadDataToGdrive();
+            alert('成功載入 4 天範例資料 (2026-07-20 ~ 2026-07-23)！目前已累積 4 天滿分紀錄，您只需親自再輸入 1 天 (例如 7/19 或 7/24) 即可親自觸發精彩煙火秀！');
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+    </script>
+</body>
+</html>
